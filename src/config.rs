@@ -11,7 +11,11 @@ pub struct Args {
 
     /// Total number of requests
     #[arg(short, long, default_value_t = 1)]
-    pub requests: u32,
+    pub requests: usize,
+
+    /// Number of concurrent requests
+    #[arg(short, long, default_value_t = 50)]
+    pub concurrency: usize,
 }
 
 pub fn init() -> (Args, Client) {
