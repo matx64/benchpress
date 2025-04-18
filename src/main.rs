@@ -1,42 +1,28 @@
-use clap::Parser;
+mod config;
+
+use config::Args;
 use reqwest::{Client, Error};
-use std::time::Duration;
-
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// Target URL to benchmark
-    #[arg(short, long)]
-    url: String,
-
-    /// Total number of requests
-    #[arg(short, long)]
-    requests: u32,
-}
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
+    let (args, client) = config::init();
 
     println!("Starting benchmark...");
     println!("URL: {}", args.url);
     println!("Total Requests: {}", args.requests);
 
-    let client = Client::builder()
-        .timeout(Duration::from_secs(30))
-        .build()
-        .expect("Failed to build Client");
-
-    execute(&client, args).await;
+    execute(client, args).await;
 }
 
-async fn execute(client: &Client, args: Args) {
+async fn execute(client: Client, args: Args) {
+    let url = args.url.as_str();
+
     let mut ok_count = 0;
     let mut err_count = 0;
 
     for _ in 0..args.requests {
-        match req(&client, &args.url).await {
-            Ok(is_ok) if is_ok => ok_count += 1,
+        match req(&client, url).await {
+            Ok(true) => ok_count += 1,
             _ => err_count += 1,
         }
     }
@@ -46,7 +32,7 @@ async fn execute(client: &Client, args: Args) {
     println!("Failed requests: {}", err_count);
 }
 
-async fn req(client: &Client, url: &String) -> Result<bool, Error> {
+async fn req(client: &Client, url: &str) -> Result<bool, Error> {
     let status = client.get(url).send().await?.status();
     Ok(!status.is_server_error() && !status.is_client_error())
 }
