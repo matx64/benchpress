@@ -82,10 +82,16 @@ fn show_results(results: Vec<RequestResult>) {
     let mut count_3xx: u32 = 0;
     let mut count_4xx: u32 = 0;
     let mut count_5xx: u32 = 0;
+
     let mut total_duration: u128 = 0;
+    let mut fastest: u128 = std::u128::MAX;
+    let mut slowest: u128 = std::u128::MIN;
 
     for result in &results {
         total_duration += result.duration_ms;
+        fastest = std::cmp::min(fastest, result.duration_ms);
+        slowest = std::cmp::max(slowest, result.duration_ms);
+
         match result.code {
             100..=199 => count_1xx += 1,
             200..=299 => count_2xx += 1,
@@ -104,6 +110,8 @@ fn show_results(results: Vec<RequestResult>) {
         count_4xx,
         count_5xx,
         total_duration,
+        fastest,
+        slowest,
     );
 }
 

@@ -29,6 +29,8 @@ pub fn result_log(
     count_4xx: u32,
     count_5xx: u32,
     total_duration: u128,
+    fastest: u128,
+    slowest: u128,
 ) {
     println!(
         "\n{}",
@@ -67,9 +69,15 @@ pub fn result_log(
         count_5xx.to_string().red()
     );
     println!(
-        "{} {:.2}ms\n",
+        "{} {:.2}ms",
         "⏱️  Average duration:".bold(),
         total_duration as f64 / results.len() as f64
+    );
+    println!("{} {:.2}ms", "🏎️  Fastest duration:".bold(), fastest as f64);
+    println!(
+        "{} {:.2}ms\n",
+        "🐢 Slowest duration:".bold(),
+        slowest as f64
     );
 }
 
