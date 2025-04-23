@@ -1,6 +1,8 @@
 mod config;
+mod log;
 
 use config::Args;
+use log::{result_log, start_log, ulimit_log};
 use reqwest::{Client, Error};
 use std::{
     error::Error as StdError,
@@ -18,10 +20,7 @@ struct RequestResult {
 async fn main() {
     let (args, client) = config::init();
 
-    println!("Starting benchmark...");
-    println!("URL: {}", args.url);
-    println!("Total Requests: {}", args.requests);
-    println!("Concurrency: {}", args.concurrency);
+    start_log(&args);
 
     execute(client, args).await;
 }
@@ -78,11 +77,11 @@ async fn request(client: &Client, url: &str) -> RequestResult {
 }
 
 fn show_results(results: Vec<RequestResult>) {
-    let mut count_1xx = 0;
-    let mut count_2xx = 0;
-    let mut count_3xx = 0;
-    let mut count_4xx = 0;
-    let mut count_5xx = 0;
+    let mut count_1xx: u32 = 0;
+    let mut count_2xx: u32 = 0;
+    let mut count_3xx: u32 = 0;
+    let mut count_4xx: u32 = 0;
+    let mut count_5xx: u32 = 0;
     let mut total_duration: u128 = 0;
 
     for result in &results {
@@ -97,16 +96,14 @@ fn show_results(results: Vec<RequestResult>) {
         }
     }
 
-    println!("\n------ Results ------");
-    println!("Total requests: {}\n", results.len());
-    println!("1xx responses: {}", count_1xx);
-    println!("2xx responses: {}", count_2xx);
-    println!("3xx responses: {}", count_3xx);
-    println!("4xx responses: {}", count_4xx);
-    println!("5xx responses: {}\n", count_5xx);
-    println!(
-        "Average duration: {:.2}ms",
-        total_duration as f64 / results.len() as f64
+    result_log(
+        results,
+        count_1xx,
+        count_2xx,
+        count_3xx,
+        count_4xx,
+        count_5xx,
+        total_duration,
     );
 }
 
@@ -114,16 +111,12 @@ fn check_ulimit_error(err: Error) {
     if let Some(err) = err.source() {
         if let Some(err) = err.source() {
             if err.to_string().contains("Too many open files") {
-                eprintln!(
-                    "
-Error: Too many open files (Host file descriptor limit reached).
-The configured `concurrency` parameter is too high, reaching your Host file descriptor limit. This is an OS limitation.
-Reduce the `concurrency` value or check the Host limit by executing `ulimit -n` and increase it up to 4096 with `ulimit -n 4096`.
-The `concurrency` parameter must be a little bit lower than the descriptor's limit because the runtime may open additional files other than requests files.
-"
-                );
-                std::process::exit(1);
+                ulimit_log();
             }
+        } else {
+            println!("Error: {}", err);
         }
+    } else {
+        println!("Error: {}", err);
     }
 }
