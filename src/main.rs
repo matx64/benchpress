@@ -48,7 +48,7 @@ async fn execute(client: Client, args: Args) {
                 Ok(false) => err_count += 1,
                 Err(err) => {
                     err_count += 1;
-                    dbg!(err.source());
+                    check_ulimit_error(err);
                 }
             }
         }
@@ -65,4 +65,22 @@ async fn execute(client: Client, args: Args) {
 async fn req(client: &Client, url: &str) -> Result<bool, Error> {
     let status = client.get(url).send().await?.status();
     Ok(!status.is_server_error() && !status.is_client_error())
+}
+
+fn check_ulimit_error(err: Error) {
+    if let Some(err) = err.source() {
+        if let Some(err) = err.source() {
+            if err.to_string().contains("Too many open files") {
+                eprintln!(
+                    "
+Error: Too many open files (Host file descriptor limit reached).
+The configured `concurrency` parameter is too high, reaching your Host file descriptor limit. This is an OS limitation.
+Reduce the `concurrency` value or check the Host limit by executing `ulimit -n` and increase it up to 4096 with `ulimit -n 4096`.
+The `concurrency` parameter must be a little bit lower than the descriptor's limit because the runtime may open additional files other than requests files.
+"
+                );
+                std::process::exit(1);
+            }
+        }
+    }
 }
