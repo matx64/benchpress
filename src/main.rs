@@ -2,14 +2,10 @@ mod config;
 mod log;
 
 use config::Args;
+use futures::future::join_all;
 use log::{result_log, start_log, ulimit_log};
 use reqwest::{Client, Error};
-use std::{
-    error::Error as StdError,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-use tokio::{sync::Semaphore, time::sleep};
+use std::{error::Error as StdError, sync::Arc, time::Instant};
 
 struct RequestResult {
     code: u16,
@@ -21,45 +17,37 @@ async fn main() {
     let (args, client) = config::init();
 
     start_log(&args);
-
     execute(client, args).await;
 }
 
 async fn execute(client: Client, args: Args) {
-    let url = args.url.as_str();
-    let semaphore = Arc::new(Semaphore::new(args.concurrency));
-
+    let url = Arc::new(args.url);
     let mut results: Vec<RequestResult> = Vec::with_capacity(args.requests);
 
-    for batch in (0..args.requests).step_by(args.concurrency) {
-        let requests_in_batch = std::cmp::min(args.concurrency, args.requests - batch);
-        let mut handles = Vec::with_capacity(requests_in_batch);
+    for batch_threshold in (0..args.requests).step_by(args.concurrency) {
+        let batch_size = std::cmp::min(args.concurrency, args.requests - batch_threshold);
 
-        for _ in 0..requests_in_batch {
-            let permit = semaphore.clone().acquire_owned().await.unwrap();
+        let futures = (0..batch_size).map(|_| {
             let client = client.clone();
-            let url = url.to_string();
+            let url = url.clone();
 
-            let handle = tokio::spawn(async move {
-                let result = request(&client, &url).await;
-                drop(permit);
-                result
-            });
+            tokio::spawn(async move { send_request(client, &url).await })
+        });
 
-            handles.push(handle);
+        let batch_results = join_all(futures).await;
+
+        for result in batch_results {
+            match result {
+                Ok(result) => results.push(result),
+                Err(err) => eprintln!("Join future error: {}", err),
+            }
         }
-
-        for handle in handles {
-            results.push(handle.await.unwrap());
-        }
-
-        sleep(Duration::from_millis(10)).await;
     }
 
     show_results(results);
 }
 
-async fn request(client: &Client, url: &str) -> RequestResult {
+async fn send_request(client: Client, url: &str) -> RequestResult {
     let start = Instant::now();
     let response = client.get(url).send().await;
     let duration = start.elapsed().as_millis();
@@ -84,8 +72,8 @@ fn show_results(results: Vec<RequestResult>) {
     let mut count_5xx: u32 = 0;
 
     let mut total_duration: u128 = 0;
-    let mut fastest: u128 = std::u128::MAX;
-    let mut slowest: u128 = std::u128::MIN;
+    let mut fastest: u128 = u128::MAX;
+    let mut slowest: u128 = u128::MIN;
 
     for result in &results {
         total_duration += result.duration_ms;
