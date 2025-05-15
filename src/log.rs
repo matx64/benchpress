@@ -1,4 +1,4 @@
-use crate::{RequestResult, config::Args};
+use crate::{config::Args, result::ExecutionResult};
 use colored::Colorize;
 
 pub fn start_log(args: &Args) {
@@ -21,17 +21,7 @@ pub fn start_log(args: &Args) {
     );
 }
 
-pub fn result_log(
-    results: Vec<RequestResult>,
-    count_1xx: u32,
-    count_2xx: u32,
-    count_3xx: u32,
-    count_4xx: u32,
-    count_5xx: u32,
-    total_duration: u128,
-    fastest: u128,
-    slowest: u128,
-) {
+pub fn result_log(result: ExecutionResult) {
     println!(
         "\n{}",
         "┌──────────────────────┐\n│     📊 Results       │\n└──────────────────────┘"
@@ -41,43 +31,47 @@ pub fn result_log(
     println!(
         "{} {}\n",
         "🔢 Total requests:".bold(),
-        results.len().to_string().yellow()
+        result.total_requests.to_string().yellow()
     );
     println!(
         "{} {}",
         "🟦 1xx responses:".bold(),
-        count_1xx.to_string().blue()
+        result.count_1xx.to_string().blue()
     );
     println!(
         "{} {}",
         "🟩 2xx responses:".bold(),
-        count_2xx.to_string().green()
+        result.count_2xx.to_string().green()
     );
     println!(
         "{} {}",
         "🟨 3xx responses:".bold(),
-        count_3xx.to_string().cyan()
+        result.count_3xx.to_string().cyan()
     );
     println!(
         "{} {}",
         "🟥 4xx responses:".bold(),
-        count_4xx.to_string().yellow()
+        result.count_4xx.to_string().yellow()
     );
     println!(
         "{} {}\n",
         "🟥 5xx responses:".bold(),
-        count_5xx.to_string().red()
+        result.count_5xx.to_string().red()
     );
+    // println!(
+    //     "{} {:.2}ms",
+    //     "⏱️  Average duration:".bold(),
+    //     total_duration as f64 / results.len() as f64
+    // );
     println!(
         "{} {:.2}ms",
-        "⏱️  Average duration:".bold(),
-        total_duration as f64 / results.len() as f64
+        "🏎️  Fastest duration:".bold(),
+        result.fastest as f64
     );
-    println!("{} {:.2}ms", "🏎️  Fastest duration:".bold(), fastest as f64);
     println!(
         "{} {:.2}ms\n",
         "🐢 Slowest duration:".bold(),
-        slowest as f64
+        result.slowest as f64
     );
 }
 
