@@ -4,10 +4,11 @@ mod result;
 
 use config::Args;
 use futures::future::join_all;
-use log::{result_log, start_log, ulimit_log};
-use reqwest::{Client, Error, StatusCode};
+use indicatif::{ProgressBar, ProgressDrawTarget};
+use log::{error_log, result_log, start_log};
+use reqwest::{Client, StatusCode};
 use result::{ExecutionResult, RequestResult};
-use std::{error::Error as StdError, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
@@ -17,18 +18,23 @@ async fn main() {
 }
 
 async fn execute(client: Client, args: Args) {
-    let url = Arc::new(args.url);
     let mut results: Vec<RequestResult> = Vec::with_capacity(args.requests);
+    let pb =
+        ProgressBar::with_draw_target(Some(args.requests as u64), ProgressDrawTarget::stdout());
+    let url = Arc::new(args.url);
+    let client = Arc::new(client);
 
     for batch_threshold in (0..args.requests).step_by(args.concurrency) {
         let batch_size = std::cmp::min(args.concurrency, args.requests - batch_threshold);
 
-        let futures = (0..batch_size).map(|_| {
+        let mut futures = Vec::with_capacity(batch_size);
+        for _ in 0..batch_size {
             let client = client.clone();
             let url = url.clone();
-
-            tokio::spawn(async move { send_request(client, &url).await })
-        });
+            futures.push(tokio::spawn(
+                async move { send_request(client, &url).await },
+            ));
+        }
 
         let batch_results = join_all(futures).await;
 
@@ -37,13 +43,16 @@ async fn execute(client: Client, args: Args) {
                 Ok(result) => results.push(result),
                 Err(err) => eprintln!("Join future error: {}", err),
             }
+            pb.inc(1);
         }
     }
 
-    show_results(results);
+    pb.finish();
+    let execution_result = ExecutionResult::new().init(results);
+    result_log(execution_result);
 }
 
-async fn send_request(client: Client, url: &str) -> RequestResult {
+async fn send_request(client: Arc<Client>, url: &str) -> RequestResult {
     let start = Instant::now();
     let response = client.get(url).send().await;
     let duration_ms = start.elapsed().as_millis();
@@ -54,27 +63,8 @@ async fn send_request(client: Client, url: &str) -> RequestResult {
             RequestResult::new(StatusCode::REQUEST_TIMEOUT, duration_ms)
         }
         Err(err) => {
-            check_ulimit_error(err);
+            error_log(err);
             std::process::exit(1);
         }
-    }
-}
-
-fn show_results(results: Vec<RequestResult>) {
-    let execution_result = ExecutionResult::new().init(results);
-    result_log(execution_result);
-}
-
-fn check_ulimit_error(err: Error) {
-    if let Some(err) = err.source() {
-        if let Some(err) = err.source() {
-            if err.to_string().contains("Too many open files") {
-                ulimit_log();
-            }
-        } else {
-            println!("Error: {}", err);
-        }
-    } else {
-        println!("Error: {}", err);
     }
 }

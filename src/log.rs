@@ -1,5 +1,8 @@
 use crate::{config::Args, result::ExecutionResult};
+
 use colored::Colorize;
+use reqwest::Error;
+use std::error::Error as StdError;
 
 pub fn start_log(args: &Args) {
     println!(
@@ -80,7 +83,23 @@ pub fn result_log(result: ExecutionResult) {
     );
 }
 
-pub fn ulimit_log() {
+pub fn error_log(err: Error) {
+    if let Some(err) = err.source() {
+        if let Some(err) = err.source() {
+            if err.to_string().contains("Too many open files") {
+                ulimit_log();
+            } else {
+                println!("Error: {}", err);
+            }
+        } else {
+            println!("Error: {}", err);
+        }
+    } else {
+        println!("Error: {}", err);
+    }
+}
+
+fn ulimit_log() {
     eprintln!(
                     "\n{}\n{}\n{}\n{}\n{}\n",
                     "❌ Error: Too many open files (Host file descriptor limit reached).".bold().red(),
