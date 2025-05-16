@@ -50,13 +50,18 @@ pub fn result_log(result: ExecutionResult) {
     );
     println!(
         "{} {}",
-        "🟥 4xx responses:".bold(),
+        "🟥 4xx responses (excluding timeouts):".bold(),
         result.count_4xx.to_string().yellow()
     );
     println!(
-        "{} {}\n",
+        "{} {}",
         "🟥 5xx responses:".bold(),
         result.count_5xx.to_string().red()
+    );
+    println!(
+        "{} {}\n",
+        "🟥 Timeouts:".bold(),
+        result.count_timeout.to_string().red()
     );
     // println!(
     //     "{} {:.2}ms",

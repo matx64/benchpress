@@ -51,6 +51,8 @@ impl ExecutionResult {
                 self.count_2xx += 1;
             } else if result.code.is_redirection() {
                 self.count_3xx += 1;
+            } else if result.code == StatusCode::REQUEST_TIMEOUT {
+                self.count_timeout += 1;
             } else if result.code.is_client_error() {
                 self.count_4xx += 1;
             } else {

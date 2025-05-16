@@ -16,6 +16,10 @@ pub struct Args {
     /// Number of concurrent requests
     #[arg(short, long, default_value_t = 50)]
     pub concurrency: usize,
+
+    /// Request timeout in seconds
+    #[arg(short, long, default_value_t = 30)]
+    pub timeout: u64,
 }
 
 pub fn init() -> (Args, Client) {
@@ -27,7 +31,7 @@ pub fn init() -> (Args, Client) {
     }
 
     let client = Client::builder()
-        .timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(args.timeout))
         .pool_max_idle_per_host(args.concurrency)
         .build()
         .expect("Failed to build Client");

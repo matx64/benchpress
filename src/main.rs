@@ -5,14 +5,13 @@ mod result;
 use config::Args;
 use futures::future::join_all;
 use log::{result_log, start_log, ulimit_log};
-use reqwest::{Client, Error};
+use reqwest::{Client, Error, StatusCode};
 use result::{ExecutionResult, RequestResult};
 use std::{error::Error as StdError, sync::Arc, time::Instant};
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     let (args, client) = config::init();
-
     start_log(&args);
     execute(client, args).await;
 }
@@ -51,6 +50,9 @@ async fn send_request(client: Client, url: &str) -> RequestResult {
 
     match response {
         Ok(response) => RequestResult::new(response.status(), duration_ms),
+        Err(err) if err.is_timeout() => {
+            RequestResult::new(StatusCode::REQUEST_TIMEOUT, duration_ms)
+        }
         Err(err) => {
             check_ulimit_error(err);
             std::process::exit(1);
