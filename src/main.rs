@@ -6,23 +6,27 @@ use config::Args;
 use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressDrawTarget};
 use log::{error_log, result_log, start_log};
-use reqwest::{Client, StatusCode};
+use reqwest::{Client, Method, StatusCode};
 use result::{ExecutionResult, RequestResult};
 use std::{sync::Arc, time::Instant};
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
-    let (args, client) = config::init();
+    let (args, client, method) = config::init();
+
     start_log(&args);
-    execute(client, args).await;
+    execute(client, args, method).await;
 }
 
-async fn execute(client: Client, args: Args) {
-    let mut results: Vec<RequestResult> = Vec::with_capacity(args.requests);
+async fn execute(client: Client, args: Args, method: Method) {
     let pb =
         ProgressBar::with_draw_target(Some(args.requests as u64), ProgressDrawTarget::stdout());
+
     let url = Arc::new(args.url);
     let client = Arc::new(client);
+    let method = Arc::new(method);
+
+    let mut results: Vec<RequestResult> = Vec::with_capacity(args.requests);
 
     for batch_threshold in (0..args.requests).step_by(args.concurrency) {
         let batch_size = std::cmp::min(args.concurrency, args.requests - batch_threshold);
@@ -31,9 +35,10 @@ async fn execute(client: Client, args: Args) {
         for _ in 0..batch_size {
             let client = client.clone();
             let url = url.clone();
-            futures.push(tokio::spawn(
-                async move { send_request(client, &url).await },
-            ));
+            let method = method.clone();
+            futures.push(tokio::spawn(async move {
+                send_request(client, &url, method).await
+            }));
         }
 
         let batch_results = join_all(futures).await;
@@ -52,9 +57,9 @@ async fn execute(client: Client, args: Args) {
     result_log(execution_result);
 }
 
-async fn send_request(client: Arc<Client>, url: &str) -> RequestResult {
+async fn send_request(client: Arc<Client>, url: &str, method: Arc<Method>) -> RequestResult {
     let start = Instant::now();
-    let response = client.get(url).send().await;
+    let response = client.request((*method).clone(), url).send().await;
     let duration_ms = start.elapsed().as_millis();
 
     match response {

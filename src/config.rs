@@ -1,6 +1,6 @@
-use clap::Parser;
-use reqwest::Client;
-use std::time::Duration;
+use clap::{Parser, ValueEnum};
+use reqwest::{Client, Method};
+use std::{fmt::Display, time::Duration};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -20,9 +20,24 @@ pub struct Args {
     /// Request timeout in seconds
     #[arg(short, long, default_value_t = 30)]
     pub timeout: u64,
+
+    /// HTTP method
+    #[arg(short, long, default_value_t = HttpMethod::Get)]
+    pub method: HttpMethod,
 }
 
-pub fn init() -> (Args, Client) {
+#[derive(Debug, Clone, ValueEnum)]
+pub enum HttpMethod {
+    Get,
+    Post,
+    Put,
+    Delete,
+    Head,
+    Options,
+    Patch,
+}
+
+pub fn init() -> (Args, Client, Method) {
     let args = Args::parse();
 
     if let Err(err) = url::Url::parse(&args.url) {
@@ -36,5 +51,36 @@ pub fn init() -> (Args, Client) {
         .build()
         .expect("Failed to build Client");
 
-    (args, client)
+    let method: Method = args.method.clone().into();
+
+    (args, client, method)
+}
+
+impl Display for HttpMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            HttpMethod::Get => "GET",
+            HttpMethod::Post => "POST",
+            HttpMethod::Put => "PUT",
+            HttpMethod::Delete => "DELETE",
+            HttpMethod::Head => "HEAD",
+            HttpMethod::Options => "OPTIONS",
+            HttpMethod::Patch => "PATCH",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl From<HttpMethod> for Method {
+    fn from(value: HttpMethod) -> Self {
+        match value {
+            HttpMethod::Get => Method::GET,
+            HttpMethod::Post => Method::POST,
+            HttpMethod::Put => Method::PUT,
+            HttpMethod::Delete => Method::DELETE,
+            HttpMethod::Head => Method::HEAD,
+            HttpMethod::Options => Method::OPTIONS,
+            HttpMethod::Patch => Method::PATCH,
+        }
+    }
 }
