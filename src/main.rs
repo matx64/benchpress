@@ -1,44 +1,36 @@
+mod args;
 mod config;
 mod log;
 mod result;
 
-use config::Args;
+use config::Config;
 use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressDrawTarget};
 use log::{error_log, result_log, start_log};
-use reqwest::{Client, Method, StatusCode};
+use reqwest::StatusCode;
 use result::{ExecutionResult, RequestResult};
 use std::{sync::Arc, time::Instant};
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
-    let (args, client, method) = config::init();
-
-    start_log(&args);
-    execute(client, args, method).await;
+    let args = args::init();
+    let cfg = config::init(args);
+    start_log(&cfg);
+    execute(cfg).await;
 }
 
-async fn execute(client: Client, args: Args, method: Method) {
-    let pb =
-        ProgressBar::with_draw_target(Some(args.requests as u64), ProgressDrawTarget::stdout());
+async fn execute(cfg: Arc<Config>) {
+    let pb = ProgressBar::with_draw_target(Some(cfg.requests as u64), ProgressDrawTarget::stdout());
 
-    let url = Arc::new(args.url);
-    let client = Arc::new(client);
-    let method = Arc::new(method);
+    let mut results: Vec<RequestResult> = Vec::with_capacity(cfg.requests);
 
-    let mut results: Vec<RequestResult> = Vec::with_capacity(args.requests);
-
-    for batch_threshold in (0..args.requests).step_by(args.concurrency) {
-        let batch_size = std::cmp::min(args.concurrency, args.requests - batch_threshold);
+    for batch_threshold in (0..cfg.requests).step_by(cfg.concurrency) {
+        let batch_size = std::cmp::min(cfg.concurrency, cfg.requests - batch_threshold);
 
         let mut futures = Vec::with_capacity(batch_size);
         for _ in 0..batch_size {
-            let client = client.clone();
-            let url = url.clone();
-            let method = method.clone();
-            futures.push(tokio::spawn(async move {
-                send_request(client, &url, method).await
-            }));
+            let cfg = cfg.clone();
+            futures.push(tokio::spawn(async move { send_request(cfg).await }));
         }
 
         let batch_results = join_all(futures).await;
@@ -57,9 +49,13 @@ async fn execute(client: Client, args: Args, method: Method) {
     result_log(execution_result);
 }
 
-async fn send_request(client: Arc<Client>, url: &str, method: Arc<Method>) -> RequestResult {
+async fn send_request(cfg: Arc<Config>) -> RequestResult {
     let start = Instant::now();
-    let response = client.request((*method).clone(), url).send().await;
+    let response = cfg
+        .client
+        .request(cfg.method.clone(), &cfg.url)
+        .send()
+        .await;
     let duration_ms = start.elapsed().as_millis();
 
     match response {

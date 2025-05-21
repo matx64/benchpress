@@ -1,26 +1,26 @@
-use crate::{config::Args, result::ExecutionResult};
+use crate::{config::Config, result::ExecutionResult};
 
 use colored::Colorize;
 use reqwest::Error;
-use std::error::Error as StdError;
+use std::{error::Error as StdError, sync::Arc};
 
-pub fn start_log(args: &Args) {
+pub fn start_log(cfg: &Arc<Config>) {
     println!(
     "\n{}",
     "┌──────────────────────────────┐\n│ 🚀 Benchmark Initialized     │\n└──────────────────────────────┘"
         .bold()
         .green()
 );
-    println!("{} {}", "🌐 Target URL:".bold(), args.url.cyan());
+    println!("{} {}", "🌐 Target URL:".bold(), cfg.url.cyan());
     println!(
         "{} {}",
         "📦 Total Requests:".bold(),
-        args.requests.to_string().yellow()
+        cfg.requests.to_string().yellow()
     );
     println!(
         "{} {}",
         "🧵 Concurrency Level:".bold(),
-        args.concurrency.to_string().magenta()
+        cfg.concurrency.to_string().magenta()
     );
 }
 
