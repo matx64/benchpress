@@ -22,6 +22,15 @@ pub struct Args {
     /// HTTP method
     #[arg(short, long, default_value_t = HttpMethod::Get)]
     pub method: HttpMethod,
+
+    /// Custom HTTP header [allows multiple]
+    #[arg(
+        short = 'H',
+        long = "header",
+        value_name = "KEY=VALUE",
+        action = clap::ArgAction::Append
+    )]
+    pub headers: Vec<Header>,
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -47,6 +56,35 @@ impl std::fmt::Display for HttpMethod {
             HttpMethod::Patch => "PATCH",
         };
         write!(f, "{}", s)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Header {
+    pub key: String,
+    pub value: String,
+}
+
+impl std::str::FromStr for Header {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (key, value) = s.split_once('=').ok_or("Invalid header format")?;
+
+        let key = key.trim();
+        let value = value.trim();
+
+        if key.is_empty() {
+            return Err("Header key cannot be empty".to_string());
+        }
+
+        if key.contains(|c: char| c.is_whitespace() || c == ':') {
+            return Err(format!("Header key '{}' contains invalid characters", key));
+        }
+
+        Ok(Self {
+            key: key.to_string(),
+            value: value.to_string(),
+        })
     }
 }
 

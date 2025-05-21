@@ -1,6 +1,9 @@
-use crate::args::{Args, HttpMethod};
+use crate::args::{Args, Header, HttpMethod};
 
-use reqwest::{Client, Method};
+use reqwest::{
+    Client, Method,
+    header::{HeaderMap, HeaderName, HeaderValue},
+};
 use std::{sync::Arc, time::Duration};
 
 pub struct Config {
@@ -15,6 +18,7 @@ pub fn init(args: Args) -> Arc<Config> {
     let client = Client::builder()
         .timeout(Duration::from_secs(args.timeout))
         .pool_max_idle_per_host(args.concurrency)
+        .default_headers(build_header_map(args.headers))
         .build()
         .expect("Failed to build Client");
 
@@ -35,4 +39,15 @@ pub fn init(args: Args) -> Arc<Config> {
         method,
         client,
     })
+}
+
+fn build_header_map(headers: Vec<Header>) -> HeaderMap {
+    let mut map = HeaderMap::new();
+
+    for header in headers {
+        let name = HeaderName::from_bytes(header.key.as_bytes()).unwrap();
+        let value = HeaderValue::from_str(&header.value).unwrap();
+        map.insert(name, value);
+    }
+    map
 }
