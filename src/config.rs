@@ -10,6 +10,7 @@ pub struct Config {
     pub url: String,
     pub requests: usize,
     pub concurrency: usize,
+    pub body: String,
     pub method: Method,
     pub client: Client,
 }
@@ -36,6 +37,7 @@ pub fn init(args: Args) -> Arc<Config> {
         url: args.url,
         requests: args.requests,
         concurrency: args.concurrency,
+        body: args.body.unwrap_or_default(),
         method,
         client,
     })

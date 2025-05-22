@@ -23,6 +23,10 @@ pub struct Args {
     #[arg(short, long, default_value_t = HttpMethod::Get)]
     pub method: HttpMethod,
 
+    /// Request body as string [default: empty]
+    #[arg(short, long)]
+    pub body: Option<String>,
+
     /// Custom HTTP header [allows multiple]
     #[arg(
         short = 'H',

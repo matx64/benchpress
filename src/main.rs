@@ -54,6 +54,7 @@ async fn send_request(cfg: Arc<Config>) -> RequestResult {
     let response = cfg
         .client
         .request(cfg.method.clone(), &cfg.url)
+        .body(cfg.body.clone())
         .send()
         .await;
     let duration_ms = start.elapsed().as_millis();
