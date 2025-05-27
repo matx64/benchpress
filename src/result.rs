@@ -21,6 +21,7 @@ pub struct ExecutionResult {
     pub count_timeout: u32,
     pub fastest: u128,
     pub slowest: u128,
+    pub p95: u128,
 }
 
 impl ExecutionResult {
@@ -35,16 +36,25 @@ impl ExecutionResult {
             count_timeout: 0,
             fastest: u128::MAX,
             slowest: u128::MIN,
+            p95: 0,
         }
     }
 
     pub fn init(mut self, results: Vec<RequestResult>) -> Self {
         self.total_requests = results.len();
 
-        for result in results {
-            self.fastest = std::cmp::min(self.fastest, result.duration_ms);
-            self.slowest = std::cmp::max(self.slowest, result.duration_ms);
+        let mut durations = results.iter().map(|r| r.duration_ms).collect::<Vec<u128>>();
+        durations.sort_unstable();
 
+        if !durations.is_empty() {
+            self.fastest = *durations.first().unwrap();
+            self.slowest = *durations.last().unwrap();
+
+            let idx = ((durations.len() as f64) * 0.95).ceil() as usize - 1;
+            self.p95 = durations[idx.min(durations.len() - 1)];
+        }
+
+        for result in results {
             if result.code.is_informational() {
                 self.count_1xx += 1;
             } else if result.code.is_success() {

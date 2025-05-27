@@ -51,13 +51,13 @@ pub enum HttpMethod {
 impl std::fmt::Display for HttpMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            HttpMethod::Get => "GET",
-            HttpMethod::Post => "POST",
-            HttpMethod::Put => "PUT",
-            HttpMethod::Delete => "DELETE",
-            HttpMethod::Head => "HEAD",
-            HttpMethod::Options => "OPTIONS",
-            HttpMethod::Patch => "PATCH",
+            HttpMethod::Get => "get",
+            HttpMethod::Post => "post",
+            HttpMethod::Put => "put",
+            HttpMethod::Delete => "delete",
+            HttpMethod::Head => "head",
+            HttpMethod::Options => "options",
+            HttpMethod::Patch => "patch",
         };
         write!(f, "{}", s)
     }

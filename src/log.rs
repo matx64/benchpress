@@ -18,7 +18,7 @@ pub fn start_log(cfg: &Arc<Config>) {
         cfg.requests.to_string().yellow()
     );
     println!(
-        "{} {}",
+        "{} {}\n",
         "🧵 Concurrency Level:".bold(),
         cfg.concurrency.to_string().magenta()
     );
@@ -26,7 +26,7 @@ pub fn start_log(cfg: &Arc<Config>) {
 
 pub fn result_log(result: ExecutionResult) {
     println!(
-        "\n{}",
+        "\n\n{}",
         "┌──────────────────────┐\n│     📊 Results       │\n└──────────────────────┘"
             .bold()
             .cyan()
@@ -66,11 +66,11 @@ pub fn result_log(result: ExecutionResult) {
         "🟥 Timeouts:".bold(),
         result.count_timeout.to_string().red()
     );
-    // println!(
-    //     "{} {:.2}ms",
-    //     "⏱️  Average duration:".bold(),
-    //     total_duration as f64 / results.len() as f64
-    // );
+    println!(
+        "{} {:.2}ms",
+        "⏱️  95th percentile duration:".bold(),
+        result.p95 as f64
+    );
     println!(
         "{} {:.2}ms",
         "🏎️  Fastest duration:".bold(),
