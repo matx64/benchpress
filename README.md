@@ -1,6 +1,4 @@
-[![bp.png](https://i.postimg.cc/W3fKJSzK/bp.png)](https://postimg.cc/vgfXJrWL)
-
----
+# benchpress
 
 A lightweight HTTP benchmarking tool.
 
