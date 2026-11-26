@@ -5,7 +5,7 @@
 <h1 class="display title">Run it now, nothing to install</h1>
 <p class="lede">One command for Linux (x86_64, arm64) and Apple Silicon Macs. No sudo, and nothing stays behind unless you keep it.</p>
 <div class="mt-7">{{ install_box("install-cmd") }}</div>
-<p class="muted"><small>Skip the menu and start the quick suite: <code>curl -fsSL {{ public_url }}/run | sh -s -- run quick</code></small></p>
+<p class="muted"><small>Skip the menu and start the quick suite: <code class="wrap">curl -fsSL {{ run_url }} | sh -s -- run quick</code></small></p>
 
 <h2>What the script does</h2>
 <ul>
@@ -15,7 +15,7 @@
   <li>Deletes the binary when you quit. Before that, benchpress offers to remove the toolchains and sources it downloaded.</li>
   <li>Runs everything inside a function called on its last line, so a partially downloaded script never runs.</li>
 </ul>
-<p class="muted"><small>SHA-256 of the script: <span class="hash">{{ script_sha }}</span></small></p>
+<p class="mt-3">The command fetches the script straight from the GitHub repository. <a href="{{ script_url }}">Read it first</a> if you like.</p>
 
 <h2>Where data goes</h2>
 <dl class="paths mt-5">
@@ -32,7 +32,7 @@
 <p class="mt-3">Manage local data in the menu shows the size of each and removes them. You can also delete the folders yourself. Your own <code>~/.rustup</code> and <code>~/.cargo</code> are never touched.</p>
 
 <h2>Install it instead</h2>
-<p><code>curl -fsSL {{ public_url }}/run | sh -s -- install</code> puts the binary in <code>~/.local/bin</code> (or <code>$BENCHPRESS_INSTALL_DIR</code>). Then:</p>
+<p><code class="wrap">curl -fsSL {{ run_url }} | sh -s -- install</code> puts the binary in <code>~/.local/bin</code> (or <code>$BENCHPRESS_INSTALL_DIR</code>). Then:</p>
 <ul>
   <li><code>benchpress</code> opens the menu.</li>
   <li><code>benchpress run quick</code> runs the smallest suite, about a minute or two.</li>

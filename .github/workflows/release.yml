@@ -7,13 +7,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
+      - if: ${{ !github.event.release.prerelease }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease
       - uses: actions/checkout@v4
       - env:
           TAG: ${{ github.event.release.tag_name }}
@@ -65,14 +76,29 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src
       - uses: actions/download-artifact@v4
         with:
+          path: dist
           merge-multiple: true
-      - run: cat ./*.sha256 > SHA256SUMS
+      - env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cd dist
+          cat ./*.sha256 > SHA256SUMS
+          sed "s/version=\${BENCHPRESS_VERSION:-latest}/version=\${BENCHPRESS_VERSION:-$TAG}/" ../src/run.sh > run.sh
+          grep -q "BENCHPRESS_VERSION:-$TAG}" run.sh
       - env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber ./*.tar.gz ./*.sha256 SHA256SUMS
+        run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber dist/*.tar.gz dist/*.sha256 dist/SHA256SUMS dist/run.sh
+      - if: ${{ !github.event.release.prerelease }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease=false --latest
 
   deploy:
     needs: upload

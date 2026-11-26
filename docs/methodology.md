@@ -44,10 +44,22 @@ The server accepts results taken in poor conditions but marks them. Charts and r
 | Low power | low power mode or a power-saving profile was active |
 | Virtualized | the CLI detected a virtual machine or container |
 | High variance | a scenario's coefficient of variation is above 10% |
+| Outlier | a scenario's median is more than 1.5 times faster or slower than the median of at least four other unflagged results from the same suite version, CPU, RAM size and OS, when at least two thirds of those results are within 1.5 times of their median. The server recomputes this whenever results change and never stores it, so a result that later finds agreeing peers rejoins the comparisons |
 
 ## Validation
 
-The server rejects a result when its suite hash does not match the suite it names, when a scenario is missing or has too few runs, when a run failed, or when numbers are implausible: wall time under the scenario's floor, CPU use above 110%, memory use above RAM plus swap, or a summary that does not match its runs. The server recomputes every summary from the raw runs and rejects the result on any difference.
+The server rejects a result when its suite hash does not match the suite it names, when a scenario is missing or has too few runs, when a run failed, or when numbers are implausible: wall time under the scenario's floor, CPU use above 110%, memory use above RAM plus swap, or a summary that does not match its runs. The server recomputes every summary from the raw runs and rejects the result on any difference. It also rejects a result whose client build target does not match the OS and CPU architecture it reports.
+
+## Integrity
+
+Results are measured on machines the server does not control, so nothing can prove that a submitted number came from a real run: anyone can modify the open-source client or post JSON by hand. Benchpress makes faked results costly to submit and limits what they can change:
+
+- Validation rejects documents that no real run could produce, as described above.
+- Outlier detection holds back a result that disagrees with its configuration's peers when at least two thirds of those peers agree with each other, so one fake result cannot move a configuration's numbers once it has a few honest results. Many coordinated fakes still can. Medians, not means, drive every chart and ranking.
+- Each network (an IPv4 address or an IPv6 /64) can submit 10 results in a burst, then one every six minutes, and an identical document is accepted only once.
+- The operator can unpublish any result with the admin token.
+
+A configuration with fewer than five unflagged results has no peers to compare against, so treat its numbers as provisional.
 
 ## Comparisons
 

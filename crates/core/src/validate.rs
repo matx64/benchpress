@@ -14,6 +14,12 @@ pub const MIN_CLIENT_VERSION: &str = "0.1.0";
 /// Coefficient of variation above which a result is flagged.
 pub const HIGH_CV: f64 = 0.1;
 
+/// Results needed from the same configuration before outliers are held back.
+pub const OUTLIER_MIN_PEERS: usize = 4;
+
+/// How many times faster or slower than its peers' median a result may be.
+pub const OUTLIER_RATIO: f64 = 1.5;
+
 /// Why a result was rejected. `code` is stable and machine-readable.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Rejection {
@@ -52,6 +58,8 @@ pub enum Flag {
     Virtualized,
     /// Runs varied by more than [`HIGH_CV`].
     HighVariance,
+    /// Far from other results of the same configuration. Computed by the server, never stored.
+    Outlier,
 }
 
 impl Flag {
@@ -62,6 +70,7 @@ impl Flag {
             Flag::LowPower => "low_power",
             Flag::Virtualized => "virtualized",
             Flag::HighVariance => "high_variance",
+            Flag::Outlier => "outlier",
         }
     }
 
@@ -76,12 +85,40 @@ impl Flag {
             Flag::HighVariance => {
                 "Run times varied by more than 10%, so something else was likely competing for the machine."
             }
+            Flag::Outlier => {
+                "Much faster or slower than other results from the same configuration, so it is held back until more results agree with it."
+            }
         }
     }
 }
 
 /// Flags raised by validation. Any flag excludes the result from aggregates by default.
 pub type Flags = Vec<Flag>;
+
+/// Whether `value` is more than [`OUTLIER_RATIO`] away from the median of its peers, and at
+/// least two thirds of those peers agree with that median. `group` is sorted and holds `value`
+/// once alongside its peers. Fewer than [`OUTLIER_MIN_PEERS`] peers never make an outlier.
+pub fn is_outlier(value: u64, group: &[u64]) -> bool {
+    let n = group.len().saturating_sub(1);
+    if n < OUTLIER_MIN_PEERS {
+        return false;
+    }
+    let skip = group.partition_point(|&g| g < value);
+    let peer = |k: usize| group[if k < skip { k } else { k + 1 }] as f64;
+    let median = if n % 2 == 1 {
+        peer(n / 2)
+    } else {
+        f64::midpoint(peer(n / 2 - 1), peer(n / 2))
+    };
+    let near = |g: u64| {
+        let g = g as f64;
+        g * OUTLIER_RATIO >= median && g <= median * OUTLIER_RATIO
+    };
+    let start = group.partition_point(|&g| !near(g) && (g as f64) < median);
+    let end = group.partition_point(|&g| near(g) || (g as f64) < median);
+    let agreeing = end - start - usize::from(near(value));
+    !near(value) && agreeing * 3 >= n * 2
+}
 
 /// Reject oversized payloads before parsing.
 pub fn validate_payload_size(len: usize) -> Result<(), Rejection> {
@@ -160,6 +197,22 @@ pub fn validate_result(result: &BenchResult, registry: &Registry) -> Result<Flag
         return Err(Rejection::new(
             "unsupported_os",
             "only macOS and Linux results are accepted",
+        ));
+    }
+    let target = &result.client.target;
+    let os_matches = match result.environment.os.name.as_str() {
+        "macOS" => target.ends_with("-apple-darwin"),
+        _ => target.contains("-linux-"),
+    };
+    let arch_matches = !matches!(cpu.arch.as_str(), "x86_64" | "aarch64")
+        || target.split('-').next() == Some(cpu.arch.as_str());
+    if !os_matches || !arch_matches {
+        return Err(Rejection::new(
+            "inconsistent_platform",
+            format!(
+                "a {target} client cannot run on {} {}",
+                result.environment.os.name, cpu.arch
+            ),
         ));
     }
     if result.scenarios.len() != manifest.scenarios.len() {
@@ -444,6 +497,16 @@ pub(crate) mod tests {
                 Err("unsupported_os"),
             ),
             (
+                "target os",
+                |r| r.client.target = "aarch64-unknown-linux-musl".into(),
+                Err("inconsistent_platform"),
+            ),
+            (
+                "target arch",
+                |r| r.hardware.cpu.arch = "x86_64".into(),
+                Err("inconsistent_platform"),
+            ),
+            (
                 "scenario dropped",
                 |r| {
                     r.scenarios.pop();
@@ -533,6 +596,23 @@ pub(crate) mod tests {
                 Ok(flags) => assert_eq!(got.as_deref(), Ok(*flags), "{name}"),
                 Err(code) => assert_eq!(got.as_ref().map_err(String::as_str), Err(*code), "{name}"),
             }
+        }
+        let peers = [40_000, 41_000, 42_000, 43_000];
+        let split = [40_500, 41_000, 65_000, 66_000, 67_000];
+        for (value, peers, outlier) in [
+            (41_000, &peers[..], false),
+            (28_000, &peers[..], false),
+            (27_000, &peers[..], true),
+            (62_000, &peers[..], false),
+            (63_000, &peers[..], true),
+            (10_000, &peers[..3], false),
+            (u64::MAX, &peers[..], true),
+            (40_000, &split[..], false),
+        ] {
+            let mut group = peers.to_vec();
+            group.push(value);
+            group.sort_unstable();
+            assert_eq!(is_outlier(value, &group), outlier, "{value} vs {peers:?}");
         }
         assert!(validate_payload_size(MAX_PAYLOAD_BYTES).is_ok());
         assert_eq!(

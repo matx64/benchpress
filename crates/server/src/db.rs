@@ -174,7 +174,7 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool> {
 }
 
 /// Summary row used by listings and aggregates.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ResultRow {
     pub id: String,
     pub created_at: String,
@@ -192,12 +192,13 @@ pub struct ResultRow {
     pub machine_family: Option<String>,
     pub form_factor: Option<String>,
     pub excluded: bool,
+    pub outlier: bool,
     pub seed: bool,
     pub scenarios: Vec<ScenarioRow>,
 }
 
 /// Per-scenario columns.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ScenarioRow {
     pub scenario_id: String,
     pub median_wall_ms: u64,
@@ -272,6 +273,7 @@ pub async fn all_rows(pool: &SqlitePool) -> Result<Vec<ResultRow>> {
                 machine_family: r.get("machine_family"),
                 form_factor: r.get("form_factor"),
                 excluded: r.get::<i64, _>("excluded") != 0,
+                outlier: false,
                 seed: r.get::<String, _>("client_version").ends_with("-seed"),
             }
         })

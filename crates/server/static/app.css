@@ -26,6 +26,7 @@
   a:hover { text-decoration-color: currentColor; }
   :focus-visible { outline: 2px solid var(--bp-focus); outline-offset: 2px; border-radius: var(--bp-radius-sm); }
   code, pre, kbd { font-family: var(--bp-font-mono); font-size: 0.875em; }
+  code.wrap { overflow-wrap: anywhere; }
   small { font-size: var(--bp-size-xs); }
   ::selection { background: var(--bp-you); color: var(--bp-on-you); }
 }

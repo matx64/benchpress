@@ -8,8 +8,10 @@ Know what your machine can lift. Benchpress builds real Rust projects with a pin
 **Run it now, without installing:**
 
 ```sh
-curl -fsSL https://benchpress.dev/run | sh
+curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh
 ```
+
+The command fetches [`run.sh`](run.sh) straight from this repository, so you can read it first.
 
 Linux (x86_64 and arm64) and Apple Silicon Macs. The script downloads one static binary into a temporary directory, verifies its SHA-256 checksum and opens a menu in your terminal. Every action returns to the menu, and Ctrl+C cancels a running benchmark. When you quit, the binary is deleted and Benchpress offers to remove the toolchains and sources it downloaded. It never uses `sudo`.
 

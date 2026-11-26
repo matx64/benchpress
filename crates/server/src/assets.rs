@@ -103,16 +103,15 @@ fn serve(name: &str, immutable: bool) -> Response {
         .into_response()
 }
 
-/// Release tag this server was built from; the launcher it serves downloads that release.
+/// Release tag this server was built from.
 pub const RELEASE_TAG: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 
-static RUN_SH: LazyLock<String> = LazyLock::new(|| {
-    include_str!("../../../run.sh").replacen(
-        "version=${BENCHPRESS_VERSION:-latest}",
-        &format!("version=${{BENCHPRESS_VERSION:-{RELEASE_TAG}}}"),
-        1,
-    )
-});
+/// Where the launcher is fetched from. Switch to
+/// `https://github.com/matx64/benchpress/releases/latest/download/run.sh` after the first release.
+pub const RUN_URL: &str = "https://raw.githubusercontent.com/matx64/benchpress/main/run.sh";
+
+/// The launcher's source, for reading before running it.
+pub const SCRIPT_SOURCE_URL: &str = "https://github.com/matx64/benchpress/blob/main/run.sh";
 
 /// Asset routes.
 pub fn routes() -> Router<Arc<AppState>> {
@@ -142,22 +141,5 @@ pub fn routes() -> Router<Arc<AppState>> {
             "/social/og-default.png",
             get(|| async { serve("social/og-default.png", false) }),
         )
-        .route(
-            "/run",
-            get(|| async {
-                (
-                    [
-                        (header::CONTENT_TYPE, "text/x-shellscript; charset=utf-8"),
-                        (header::CACHE_CONTROL, "public, max-age=300"),
-                    ],
-                    RUN_SH.as_str(),
-                )
-            }),
-        )
         .route("/robots.txt", get(|| async { "User-agent: *\nAllow: /\n" }))
-}
-
-/// SHA-256 of run.sh, shown on the start page.
-pub fn run_sh_sha256() -> String {
-    hex::encode(Sha256::digest(RUN_SH.as_bytes()))
 }

@@ -521,6 +521,10 @@ async fn result(
     };
     let m = &suite.manifest;
     let snap = state.snap();
+    let mut flags = stored.flags.clone();
+    if snap.row(&stored.id).is_some_and(|row| row.outlier) {
+        flags.push(benchpress_core::validate::Flag::Outlier);
+    }
     let headline = r
         .scenario(HEADLINE)
         .or(r.scenarios.first())
@@ -708,12 +712,11 @@ async fn result(
     ctx.insert("scenarios".into(), scen.into());
     ctx.insert(
         "hints".into(),
-        benchpress_core::hints::hints(r, &stored.flags).into(),
+        benchpress_core::hints::hints(r, &flags).into(),
     );
     ctx.insert(
         "flags".into(),
-        stored
-            .flags
+        flags
             .iter()
             .map(|f| json!({"id": f.as_str(), "text": f.explain()}))
             .collect::<Vec<_>>()
@@ -1166,6 +1169,7 @@ async fn about(State(state): State<Arc<AppState>>, jar: CookieJar, headers: Head
             benchpress_core::validate::Flag::LowPower,
             benchpress_core::validate::Flag::Virtualized,
             benchpress_core::validate::Flag::HighVariance,
+            benchpress_core::validate::Flag::Outlier,
         ]
         .iter()
         .map(|f| json!({"id": f.as_str(), "text": f.explain()}))
@@ -1200,7 +1204,6 @@ async fn start(State(state): State<Arc<AppState>>, jar: CookieJar, headers: Head
             .into(),
     );
     ctx.insert("sums".into(), format!("{base}/SHA256SUMS").into());
-    ctx.insert("script_sha".into(), assets::run_sh_sha256().into());
     p.render("start.html", &ctx)
 }
 

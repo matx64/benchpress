@@ -3,6 +3,8 @@
 
 use std::collections::BTreeMap;
 
+use benchpress_core::validate::is_outlier;
+
 use crate::db::ResultRow;
 
 /// All visible results, newest first.
@@ -86,6 +88,54 @@ pub struct ConfigStats {
     pub families: Vec<String>,
     pub swap_share: f64,
     pub result_ids: Vec<String>,
+}
+
+/// Hold back results far from their peers: the other unflagged results of the same suite
+/// version and configuration. Marked results are excluded like flagged ones.
+pub fn mark_outliers(rows: &mut [ResultRow]) {
+    let key = |r: &ResultRow| {
+        (
+            r.suite_id.clone(),
+            r.suite_version,
+            r.cpu_family.clone(),
+            r.mem_gb,
+            r.os_name.clone(),
+        )
+    };
+    let mut groups: BTreeMap<_, Vec<usize>> = BTreeMap::new();
+    for (i, r) in rows.iter().enumerate() {
+        if !r.excluded {
+            groups.entry(key(r)).or_default().push(i);
+        }
+    }
+    let mut marked = Vec::new();
+    for members in groups.values() {
+        let mut values: BTreeMap<&str, Vec<u64>> = BTreeMap::new();
+        for &i in members {
+            for sc in &rows[i].scenarios {
+                values
+                    .entry(sc.scenario_id.as_str())
+                    .or_default()
+                    .push(sc.median_wall_ms);
+            }
+        }
+        for v in values.values_mut() {
+            v.sort_unstable();
+        }
+        for &i in members {
+            if rows[i]
+                .scenarios
+                .iter()
+                .any(|sc| is_outlier(sc.median_wall_ms, &values[sc.scenario_id.as_str()]))
+            {
+                marked.push(i);
+            }
+        }
+    }
+    for i in marked {
+        rows[i].outlier = true;
+        rows[i].excluded = true;
+    }
 }
 
 /// Linear-interpolated percentile of sorted values.
@@ -190,4 +240,63 @@ fn mode(values: impl Iterator<Item = u32>) -> Option<u32> {
         .into_iter()
         .max_by_key(|&(v, c)| (c, std::cmp::Reverse(v)))
         .map(|(v, _)| v)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::ScenarioRow;
+
+    fn row(id: &str, version: u32, mem_gb: u32, excluded: bool, ms: u64) -> ResultRow {
+        ResultRow {
+            id: id.into(),
+            suite_id: "rust-quick".into(),
+            suite_version: version,
+            cpu_family: "Apple M3 Pro".into(),
+            mem_gb,
+            os_name: "macOS".into(),
+            excluded,
+            scenarios: vec![ScenarioRow {
+                scenario_id: "clean-release".into(),
+                median_wall_ms: ms,
+                ..ScenarioRow::default()
+            }],
+            ..ResultRow::default()
+        }
+    }
+
+    #[test]
+    fn outliers_compare_only_unflagged_peers_of_one_configuration() {
+        let peers = || (0..4).map(|i| row(&format!("p{i}"), 1, 36, false, 40_000 + i * 500));
+        let cases: &[(&str, ResultRow, bool)] = &[
+            ("fast", row("x", 1, 36, false, 20_000), true),
+            ("agrees", row("x", 1, 36, false, 41_000), false),
+            ("other version", row("x", 2, 36, false, 20_000), false),
+            ("other memory", row("x", 1, 18, false, 20_000), false),
+            ("already flagged", row("x", 1, 36, true, 20_000), false),
+        ];
+        for (name, candidate, outlier) in cases {
+            let mut rows: Vec<ResultRow> = peers().collect();
+            rows.push(candidate.clone());
+            mark_outliers(&mut rows);
+            let x = rows.iter().find(|r| r.id == "x").unwrap();
+            assert_eq!(x.outlier, *outlier, "{name}");
+            assert!(
+                rows.iter().filter(|r| r.id != "x").all(|r| !r.outlier),
+                "{name}"
+            );
+        }
+        let mut flagged_peers: Vec<ResultRow> = peers()
+            .map(|mut r| {
+                r.excluded = true;
+                r
+            })
+            .collect();
+        flagged_peers.push(row("x", 1, 36, false, 20_000));
+        mark_outliers(&mut flagged_peers);
+        assert!(
+            !flagged_peers[4].outlier,
+            "flagged results counted as peers"
+        );
+    }
 }

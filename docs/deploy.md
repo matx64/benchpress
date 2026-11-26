@@ -58,7 +58,9 @@ Workflows run only when you publish a GitHub release, so day-to-day pushes cost 
 - secrets `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`,
 - passwordless `sudo` on the host for `install` and `systemctl restart benchpress-server`.
 
-Tag releases `v<workspace version>` (for example `v0.1.0` for `version = "0.1.0"` in `Cargo.toml`); the workflow stops when they differ. The server serves `run.sh` pinned to the release it was built from, so `curl … /run | sh` keeps downloading the previous release while a new one is tested and built, and switches once deploy finishes. Run `run.sh` from the repository and it falls back to `releases/latest`. If CI fails, the release stays without archives: fix the problem, delete the release and its tag, and publish again.
+Tag releases `v<workspace version>` (for example `v0.1.0` for `version = "0.1.0"` in `Cargo.toml`); the workflow stops when they differ. The workflow marks the release as a pre-release while it tests and builds, so GitHub's "latest" release keeps pointing at the previous one. After the upload, which includes a copy of `run.sh` pinned to the new tag, it marks the release as latest again; a release you published as a pre-release stays one. Every other release ends up as latest, even if you unticked "Set as the latest release", and releases run one at a time. If CI fails, the release stays a pre-release without archives: fix the problem, delete the release and its tag, and publish again.
+
+The run command on the website, the README and the top of `run.sh` fetches `run.sh` from `main`, which downloads `releases/latest`. After the first release, switch all three, and `RUN_URL` in `crates/server/src/assets.rs`, to `https://github.com/matx64/benchpress/releases/latest/download/run.sh` so the script and binary always come from the same release.
 
 ## Backups
 

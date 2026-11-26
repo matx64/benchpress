@@ -27,6 +27,9 @@
 <p>Flagged results are accepted and shown, but left out of rankings and aggregates unless you include them.</p>
 <ul>{% for f in flags %}<li>{{ f.text }}</li>{% endfor %}</ul>
 
+<h2>Can results be faked?</h2>
+<p>Yes, with effort: results come from machines Benchpress does not control, and the client is open source. The server rejects numbers no real run could produce, holds back results that disagree with other results from the same configuration, limits how often one network can submit, and can unpublish anything. Configurations with fewer than five unflagged results have nothing to check against, so treat them as provisional.</p>
+
 <h2 id="privacy">Privacy</h2>
 <p>Nothing leaves your machine unless you publish. Before upload, Benchpress shows the exact JSON and asks you to confirm. Published results are public.</p>
 <ul>

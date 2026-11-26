@@ -93,7 +93,8 @@ impl AppState {
     /// Reload the snapshot after a write.
     pub async fn refresh(&self) -> Result<()> {
         let _guard = self.refresh_lock.lock().await;
-        let rows = db::all_rows(&self.pool).await?;
+        let mut rows = db::all_rows(&self.pool).await?;
+        stats::mark_outliers(&mut rows);
         *self.snapshot.write().expect("snapshot lock") = Arc::new(stats::Snapshot { rows });
         Ok(())
     }

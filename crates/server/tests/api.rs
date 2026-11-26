@@ -302,21 +302,6 @@ async fn submit_show_unpublish() {
         StatusCode::NOT_FOUND,
         "stale share card served for a deleted result"
     );
-    let launcher = router
-        .clone()
-        .oneshot(Request::get("/run").body(Body::empty()).unwrap())
-        .await
-        .unwrap()
-        .into_body()
-        .collect()
-        .await
-        .unwrap()
-        .to_bytes();
-    let pinned = format!("BENCHPRESS_VERSION:-v{}}}", env!("CARGO_PKG_VERSION"));
-    assert!(
-        String::from_utf8_lossy(&launcher).contains(&pinned),
-        "served launcher is not pinned to this server's release"
-    );
     let logs = String::from_utf8(logs.0.lock().unwrap().clone()).unwrap();
     assert!(
         logs.contains("/api/v1/results"),
