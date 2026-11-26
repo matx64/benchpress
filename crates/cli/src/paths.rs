@@ -25,6 +25,21 @@ pub fn results_dir() -> Result<PathBuf> {
         .join("results"))
 }
 
+/// Set by the `run.sh` launcher: the binary is deleted when it exits.
+pub fn ephemeral() -> bool {
+    std::env::var_os("BENCHPRESS_EPHEMERAL").is_some_and(|v| v == "1")
+}
+
+/// A path for display, with the home directory shortened to `~`.
+pub fn display(path: &Path) -> String {
+    if let Some(home) = std::env::var_os("HOME").map(PathBuf::from)
+        && let Ok(rest) = path.strip_prefix(&home)
+    {
+        return Path::new("~").join(rest).display().to_string();
+    }
+    path.display().to_string()
+}
+
 /// Rustup home owned by Benchpress, shared across runs.
 pub fn rustup_home() -> Result<PathBuf> {
     Ok(cache_dir()?.join("rustup"))
@@ -43,6 +58,70 @@ pub fn build_cargo_home() -> Result<PathBuf> {
 /// Cached source tarballs.
 pub fn sources_dir() -> Result<PathBuf> {
     Ok(cache_dir()?.join("sources"))
+}
+
+/// Everything under the cache directory that Benchpress creates.
+pub fn cache_entries() -> Result<Vec<PathBuf>> {
+    let root = cache_dir()?;
+    Ok([
+        "rustup",
+        "rustup-cargo",
+        "cargo-home",
+        "sources",
+        "rustup-init",
+    ]
+    .iter()
+    .map(|n| root.join(n))
+    .collect())
+}
+
+/// Lock held by every run (shared) and by removal of downloads (exclusive, non-blocking).
+/// `None` means another process holds a conflicting lock.
+pub fn lock_runs(exclusive: bool) -> Result<Option<nix::fcntl::Flock<std::fs::File>>> {
+    use nix::fcntl::{Flock, FlockArg};
+    let dir = cache_dir()?;
+    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(dir.join("run.lock"))?;
+    let arg = if exclusive {
+        FlockArg::LockExclusiveNonblock
+    } else {
+        FlockArg::LockShared
+    };
+    match Flock::lock(file, arg) {
+        Ok(lock) => Ok(Some(lock)),
+        Err((_, nix::errno::Errno::EWOULDBLOCK)) => Ok(None),
+        Err((_, e)) => Err(e).context("locking the Benchpress cache"),
+    }
+}
+
+/// Total size of the files under `path`, not following symlinks.
+pub fn size_of(path: &Path) -> u64 {
+    let Ok(meta) = std::fs::symlink_metadata(path) else {
+        return 0;
+    };
+    if !meta.is_dir() {
+        return meta.len();
+    }
+    std::fs::read_dir(path).map_or(0, |rd| {
+        rd.filter_map(Result::ok).map(|e| size_of(&e.path())).sum()
+    })
+}
+
+/// Remove a file or directory if it exists. Returns whether anything was removed.
+pub fn remove(path: &Path) -> Result<bool> {
+    match std::fs::symlink_metadata(path) {
+        Err(_) => Ok(false),
+        Ok(m) if m.is_dir() => std::fs::remove_dir_all(path)
+            .map(|()| true)
+            .with_context(|| format!("removing {}", path.display())),
+        Ok(_) => std::fs::remove_file(path)
+            .map(|()| true)
+            .with_context(|| format!("removing {}", path.display())),
+    }
 }
 
 /// Parent of all default build trees. Outside `$HOME` and on a real disk.

@@ -3,13 +3,13 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use benchpress_core::validate::validate_result;
 use benchpress_core::{RegisteredSuite, Registry, Tier};
 
 use crate::output::{self, Role, paint};
 use crate::runner::{self, RunOptions};
-use crate::{probe, report, submit};
+use crate::{paths, probe, report, submit};
 
 /// `benchpress run` arguments.
 #[derive(clap::Args, Debug, Clone)]
@@ -141,7 +141,7 @@ pub fn execute(args: &Args) -> Result<()> {
         validate_result(&outcome.result, &registry)
     };
     report::print(&outcome.result, flags.as_deref().unwrap_or_default());
-    output::field("Saved", outcome.path.display().to_string());
+    output::field("Saved", paths::display(&outcome.path));
     output::field("Id", outcome.local_id.clone());
     if args.json {
         output::data(&serde_json::to_string_pretty(&outcome.result)?);
@@ -156,8 +156,8 @@ pub fn execute(args: &Args) -> Result<()> {
             output::line(paint(
                 Role::Muted,
                 &format!(
-                    "Publish later with `benchpress submit {}`.",
-                    outcome.local_id
+                    "Publish it later {}.",
+                    output::later(&format!("submit {}", outcome.local_id), "Your results")
                 ),
             ));
         }
@@ -172,21 +172,19 @@ pub fn execute(args: &Args) -> Result<()> {
                 output::line(paint(
                     Role::Muted,
                     &format!(
-                        "Publish later with `benchpress submit {}`.",
-                        outcome.local_id
+                        "Publish it later {}.",
+                        output::later(&format!("submit {}", outcome.local_id), "Your results")
                     ),
                 ));
             }
         }
     }
+    super::data::note_downloads();
     Ok(())
 }
 
-/// No arguments: pick a tier, confirm time and disk, run.
-pub fn interactive() -> Result<()> {
-    if !output::is_interactive() {
-        bail!("no command given. Try `benchpress run quick` or `benchpress --help`.");
-    }
+/// Pick a suite, confirm time and disk, run. Backing out returns without running.
+pub fn pick_and_run() -> Result<()> {
     let registry = Registry::builtin();
     let suites = registry.latest_all();
     let items: Vec<String> = suites
@@ -206,16 +204,13 @@ pub fn interactive() -> Result<()> {
             )
         })
         .collect();
-    output::line("Know what your machine can lift.");
     let default = suites
         .iter()
-        .position(|s| s.manifest.tier == Tier::Standard)
+        .position(|s| s.manifest.tier == Tier::Quick)
         .unwrap_or(0);
-    let choice = dialoguer::Select::new()
-        .with_prompt("Pick a suite")
-        .items(&items)
-        .default(default)
-        .interact()?;
+    let Some(choice) = output::choose("Pick a suite", &items, default)? else {
+        return Ok(());
+    };
     let s = suites[choice];
     let e = s.manifest.requirements.estimated_minutes;
     if !output::confirm(
@@ -227,7 +222,7 @@ pub fn interactive() -> Result<()> {
     ) {
         return Ok(());
     }
-    let args = Args {
+    execute(&Args {
         suite: s.manifest.id.clone(),
         runs: None,
         cooldown: 10,
@@ -238,6 +233,5 @@ pub fn interactive() -> Result<()> {
         json: false,
         suite_file: None,
         source_dir: None,
-    };
-    execute(&args)
+    })
 }

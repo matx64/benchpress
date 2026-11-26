@@ -4,7 +4,7 @@ This page describes what a Benchpress run measures and how the site turns runs i
 
 ## What runs
 
-A suite pins one Rust project at an exact commit and one exact toolchain version. The CLI downloads the project's source archive and checks its SHA-256 against the manifest. It installs the toolchain into its own rustup home under the Benchpress cache, so the run never uses or changes your toolchains. `cargo fetch` downloads dependencies before any timing starts, and every timed build passes `--locked --offline`.
+A suite pins one Rust project at an exact commit and one exact toolchain version. The CLI downloads the project's source archive and checks its SHA-256 against the manifest. It installs the toolchain into its own rustup home under the Benchpress cache, so the run never uses or changes your toolchains. Build directories live outside your home directory and are removed after every run, including after Ctrl-C; see [Local data](../README.md#local-data) for where everything goes and how to remove it. `cargo fetch` downloads dependencies before any timing starts, and every timed build passes `--locked --offline`.
 
 Each suite has five scenarios:
 

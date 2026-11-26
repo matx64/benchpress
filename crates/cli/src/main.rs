@@ -53,7 +53,11 @@ enum Command {
     /// Check this machine's setup without running a benchmark
     Doctor,
     /// Remove cached toolchains, sources and build directories
-    Clean,
+    Clean {
+        /// Remove local results too, including the tokens that unpublish them
+        #[arg(long)]
+        all: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -79,8 +83,11 @@ fn main() -> ExitCode {
         .init();
     interrupt::install();
     let cli = Cli::parse();
+    let offer_cleanup = paths::ephemeral()
+        && output::is_interactive()
+        && !matches!(cli.command, None | Some(Command::Clean { .. }));
     let res = match cli.command {
-        None => commands::run::interactive(),
+        None => commands::menu::run(),
         Some(Command::Run(args)) => commands::run::execute(&args),
         Some(Command::List) => commands::list(),
         Some(Command::Results { action: None }) => commands::results_list(),
@@ -92,23 +99,22 @@ fn main() -> ExitCode {
             .map(|_| ()),
         Some(Command::Unpublish { id }) => submit::resolve(&id).and_then(|p| submit::unpublish(&p)),
         Some(Command::Doctor) => commands::doctor(),
-        Some(Command::Clean) => commands::clean(),
+        Some(Command::Clean { all }) => commands::clean(all),
     };
-    match res {
+    let code = match res {
         Ok(()) => ExitCode::SUCCESS,
-        Err(e) if e.downcast_ref::<interrupt::Interrupted>().is_some() || interrupt::is_set() => {
-            output::blank();
-            output::line(
-                "Interrupted. Touched files were restored and the build directory removed.",
-            );
-            ExitCode::from(130)
-        }
-        Err(e) if e.downcast_ref::<runner::measure::CommandFailed>().is_some() => ExitCode::FAILURE,
-        Err(e) => {
+        Err(e) => commands::report_error(&e),
+    };
+    if interrupt::terminating() {
+        return ExitCode::from(143);
+    }
+    if offer_cleanup {
+        interrupt::reset();
+        if let Err(e) = commands::data::offer_cleanup() {
             output::error(format!("{e:#}"));
-            ExitCode::FAILURE
         }
     }
+    code
 }
 
 /// Parse a `--workdir` value.

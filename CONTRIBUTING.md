@@ -10,7 +10,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all --check
 ```
 
-CI runs the same three commands on Linux and macOS, plus `cargo deny check`, a test of `install.sh`, and an end-to-end job that runs the quick suite and publishes it to a local server.
+CI does not run on pushes or pull requests. Run the three commands above before you push. Publishing a GitHub release runs the full CI workflow (the same commands on Linux and macOS, `cargo deny check`, a test of `run.sh`, and an end-to-end job that runs the quick suite and publishes it to a local server) before it builds and uploads the binaries. Maintainers can also start CI by hand from the Actions tab.
 
 ## Running the site locally
 
@@ -28,4 +28,4 @@ Open http://localhost:8080. Seed results are fake and the site shows a banner wh
 - A change to measured behavior updates [docs/methodology.md](docs/methodology.md) in the same pull request.
 - Tests cover contracts only. Extend an existing table test before writing a new one.
 
-Contributions are licensed under MIT OR Apache-2.0, like the rest of the project.
+Contributions are licensed under MIT, like the rest of the project.

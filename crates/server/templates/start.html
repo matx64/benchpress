@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "macros.html" import install_box %}
+{% block main %}
+<div class="prose">
+<h1 class="display title">Run it now, nothing to install</h1>
+<p class="lede">One command for Linux (x86_64, arm64) and Apple Silicon Macs. No sudo, and nothing stays behind unless you keep it.</p>
+<div class="mt-7">{{ install_box("install-cmd") }}</div>
+<p class="muted"><small>Skip the menu and start the quick suite: <code>curl -fsSL {{ public_url }}/run | sh -s -- run quick</code></small></p>
+
+<h2>What the script does</h2>
+<ul>
+  <li>Detects your OS and CPU with <code>uname</code> and picks the matching release binary. Intel Macs and Windows are not supported yet.</li>
+  <li>Downloads the binary and its <code>.sha256</code> file from the latest GitHub release into a temporary directory, and aborts if the checksum does not match.</li>
+  <li>Starts the menu in your terminal. Every action returns to it, and Ctrl+C cancels a running benchmark.</li>
+  <li>Deletes the binary when you quit. Before that, benchpress offers to remove the toolchains and sources it downloaded.</li>
+  <li>Runs everything inside a function called on its last line, so a partially downloaded script never runs.</li>
+</ul>
+<p class="muted"><small>SHA-256 of the script: <span class="hash">{{ script_sha }}</span></small></p>
+
+<h2>Where data goes</h2>
+<dl class="paths mt-5">
+  <dt>Toolchains, sources and crates</dt>
+  <dd><span class="muted">Linux</span> <code>~/.cache/benchpress</code></dd>
+  <dd><span class="muted">macOS</span> <code>~/Library/Caches/benchpress</code></dd>
+  <dt>Build directories, removed after each run</dt>
+  <dd><span class="muted">Linux</span> <code>/var/tmp/benchpress-&lt;uid&gt;</code></dd>
+  <dd><span class="muted">macOS</span> <code>$TMPDIR/benchpress</code></dd>
+  <dt>Results and unpublish tokens</dt>
+  <dd><span class="muted">Linux</span> <code>~/.local/share/benchpress</code></dd>
+  <dd><span class="muted">macOS</span> <code>~/Library/Application Support/benchpress</code></dd>
+</dl>
+<p class="mt-3">Manage local data in the menu shows the size of each and removes them. You can also delete the folders yourself. Your own <code>~/.rustup</code> and <code>~/.cargo</code> are never touched.</p>
+
+<h2>Install it instead</h2>
+<p><code>curl -fsSL {{ public_url }}/run | sh -s -- install</code> puts the binary in <code>~/.local/bin</code> (or <code>$BENCHPRESS_INSTALL_DIR</code>). Then:</p>
+<ul>
+  <li><code>benchpress</code> opens the menu.</li>
+  <li><code>benchpress run quick</code> runs the smallest suite, about a minute or two.</li>
+  <li><code>benchpress doctor</code> checks your setup without running anything.</li>
+  <li><code>benchpress clean</code> removes cached toolchains, sources and build directories; <code>--all</code> removes results too.</li>
+</ul>
+
+<h2>Manual download</h2>
+<table class="data stack-sm mt-5">
+  <thead><tr><th scope="col">Platform</th><th scope="col">Archive</th><th scope="col">Checksum</th></tr></thead>
+  <tbody>{% for t in targets %}
+    <tr><td class="strong full">{{ t.label }}</td><td><a href="{{ t.url }}">benchpress-{{ t.target }}.tar.gz</a></td><td><a href="{{ t.sha }}">sha256</a></td></tr>
+  {% endfor %}</tbody>
+</table>
+<p class="mt-3"><a href="{{ sums }}">SHA256SUMS</a> for every archive.</p>
+</div>
+{% endblock %}

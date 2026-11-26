@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use benchpress_core::Tier;
 
 static JSON_MODE: AtomicBool = AtomicBool::new(false);
+static MENU_MODE: AtomicBool = AtomicBool::new(false);
 static DEPTH: OnceLock<Depth> = OnceLock::new();
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -170,6 +171,43 @@ pub fn field(label: &str, value: impl AsRef<str>) {
     ));
 }
 
+/// Pick from a menu. `None` when the user backs out with Esc, q or Ctrl+C.
+pub fn choose<T: std::fmt::Display>(
+    prompt: &str,
+    items: &[T],
+    default: usize,
+) -> anyhow::Result<Option<usize>> {
+    let picked = dialoguer::Select::new()
+        .with_prompt(prompt)
+        .items(items)
+        .default(default)
+        .interact_opt();
+    let _ = console::Term::stderr().show_cursor();
+    match picked {
+        Ok(Some(p)) => {
+            crate::interrupt::reset();
+            Ok(Some(p))
+        }
+        Ok(None) => Ok(None),
+        Err(dialoguer::Error::IO(e)) if e.kind() == std::io::ErrorKind::Interrupted => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Inside the menu, or launched by `run.sh` without an installed binary.
+pub fn set_menu_mode(on: bool) {
+    MENU_MODE.store(on, Ordering::Relaxed);
+}
+
+/// Point the user at a later action: a command when installed, the menu otherwise.
+pub fn later(command: &str, menu: &str) -> String {
+    if MENU_MODE.load(Ordering::Relaxed) || crate::paths::ephemeral() {
+        format!("from {menu}")
+    } else {
+        format!("with `benchpress {command}`")
+    }
+}
+
 /// Ask a yes/no question on stderr. Non-interactive sessions get `default`.
 pub fn confirm(prompt: &str, default: bool) -> bool {
     if !is_interactive() {
@@ -179,7 +217,11 @@ pub fn confirm(prompt: &str, default: bool) -> bool {
         .with_prompt(prompt)
         .default(default)
         .interact()
-        .unwrap_or(false)
+        .inspect(|_| crate::interrupt::reset())
+        .unwrap_or_else(|_| {
+            let _ = console::Term::stderr().show_cursor();
+            false
+        })
 }
 
 /// Show long text through `$PAGER` (or `less`), falling back to printing.

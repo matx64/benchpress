@@ -78,6 +78,20 @@ fn submission_path(result_path: &Path) -> PathBuf {
     result_path.with_extension("submission.json")
 }
 
+/// Delete a local result and the files saved next to it (samples, submission).
+pub fn delete_local(result_path: &Path) -> Result<()> {
+    let (Some(dir), Some(stem)) = (result_path.parent(), result_path.file_stem()) else {
+        return Ok(());
+    };
+    let prefix = format!("{}.", stem.to_string_lossy());
+    for entry in std::fs::read_dir(dir)?.filter_map(Result::ok) {
+        if entry.file_name().to_string_lossy().starts_with(&prefix) {
+            paths::remove(&entry.path())?;
+        }
+    }
+    Ok(())
+}
+
 /// Load a saved submission for a local result.
 pub fn load_submission(result_path: &Path) -> Option<Submission> {
     serde_json::from_str(&std::fs::read_to_string(submission_path(result_path)).ok()?).ok()
@@ -104,9 +118,10 @@ pub fn submit(result_path: &Path, yes: bool) -> Result<Option<String>> {
         output::line(format!(
             "This exact JSON will be sent to {server}. It contains hardware model details and timings, and no names, paths, serial numbers or addresses."
         ));
-        output::line(
-            "Published results are public. You can unpublish later with `benchpress unpublish`.",
-        );
+        output::line(format!(
+            "Published results are public. You can unpublish it later {}.",
+            output::later("unpublish <id>", "Your results")
+        ));
         output::blank();
         output::page(&serde_json::to_string_pretty(&result)?);
         output::blank();

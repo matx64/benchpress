@@ -40,7 +40,7 @@ pub fn routes() -> Router<Arc<AppState>> {
         .route("/insights/cores", get(insights_cores))
         .route("/suites", get(suites))
         .route("/about", get(about))
-        .route("/install", get(install))
+        .route("/start", get(start))
         .route("/theme", get(theme))
 }
 
@@ -1175,23 +1175,22 @@ async fn about(State(state): State<Arc<AppState>>, jar: CookieJar, headers: Head
     p.render("about.html", &ctx)
 }
 
-async fn install(
-    State(state): State<Arc<AppState>>,
-    jar: CookieJar,
-    headers: HeaderMap,
-) -> Response {
+async fn start(State(state): State<Arc<AppState>>, jar: CookieJar, headers: HeaderMap) -> Response {
     let p = Page {
         state: &state,
         jar: &jar,
         headers: &headers,
     };
     let mut ctx = p.base(
-        "Install",
-        "Install the benchpress CLI on Linux or an Apple Silicon Mac.",
-        "/install",
-        "install",
+        "Run it now",
+        "Run benchpress on Linux or an Apple Silicon Mac without installing it.",
+        "/start",
+        "start",
     );
-    let base = "https://github.com/matx64/benchpress/releases/latest/download";
+    let base = format!(
+        "https://github.com/matx64/benchpress/releases/download/{}",
+        assets::RELEASE_TAG
+    );
     ctx.insert(
         "targets".into(),
         [("Linux x86_64", "x86_64-unknown-linux-musl"), ("Linux arm64", "aarch64-unknown-linux-musl"), ("macOS Apple Silicon", "aarch64-apple-darwin")]
@@ -1201,8 +1200,8 @@ async fn install(
             .into(),
     );
     ctx.insert("sums".into(), format!("{base}/SHA256SUMS").into());
-    ctx.insert("script_sha".into(), assets::install_sh_sha256().into());
-    p.render("install.html", &ctx)
+    ctx.insert("script_sha".into(), assets::run_sh_sha256().into());
+    p.render("start.html", &ctx)
 }
 
 async fn theme(jar: CookieJar, Query(q): Q) -> (CookieJar, Redirect) {

@@ -1,11 +1,13 @@
 #!/bin/sh
-# Benchpress installer: downloads the latest release binary for this machine,
-# verifies its SHA-256 checksum and installs it without sudo.
+# Benchpress launcher: downloads the latest release binary for this machine into a
+# temporary directory, verifies its SHA-256 checksum, runs it and deletes it on exit.
 #
-#   curl -fsSL https://benchpress.dev/install.sh | sh
-#   curl -fsSL https://benchpress.dev/install.sh | sh -s -- run
+#   curl -fsSL https://benchpress.dev/run | sh                     open the menu
+#   curl -fsSL https://benchpress.dev/run | sh -s -- run quick     any benchpress command
+#   curl -fsSL https://benchpress.dev/run | sh -s -- install       install to ~/.local/bin instead
 #
-# Environment: BENCHPRESS_INSTALL_DIR (default ~/.local/bin), BENCHPRESS_VERSION (default latest),
+# Environment: BENCHPRESS_INSTALL_DIR (default ~/.local/bin), BENCHPRESS_VERSION (a release tag;
+# the copy served by the website pins its own release, otherwise latest),
 # BENCHPRESS_DOWNLOAD_URL (a mirror holding the release assets; https:// or file://).
 
 set -eu
@@ -22,7 +24,7 @@ fail() {
 }
 
 need() {
-    command -v "$1" >/dev/null 2>&1 || fail "this installer needs '$1'"
+    command -v "$1" >/dev/null 2>&1 || fail "this script needs '$1'"
 }
 
 detect_target() {
@@ -77,9 +79,18 @@ main() {
     fi
     asset="benchpress-$target.tar.gz"
     dir=${BENCHPRESS_INSTALL_DIR:-$HOME/.local/bin}
+    mode=run
+    if [ "${1:-}" = install ]; then
+        mode=install
+        shift
+        [ "$#" -eq 0 ] || fail "install takes no other arguments; run benchpress after installing"
+    fi
 
     tmp=$(mktemp -d 2>/dev/null || mktemp -d -t benchpress)
-    trap 'rm -rf "$tmp"' EXIT INT TERM
+    trap 'rm -rf "$tmp"' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    trap 'exit 129' HUP
 
     say "Downloading $asset"
     download "$base/$asset" "$tmp/$asset"
@@ -89,31 +100,41 @@ main() {
     [ -n "$expected" ] && [ "$expected" = "$actual" ] || fail "checksum mismatch for $asset (expected $expected, got $actual)"
 
     tar -xzf "$tmp/$asset" -C "$tmp"
-    mkdir -p "$dir"
-    mv "$tmp/benchpress" "$dir/benchpress"
-    chmod 755 "$dir/benchpress"
-    say "Installed benchpress to $dir/benchpress"
+    chmod 755 "$tmp/benchpress"
 
-    case ":$PATH:" in
-        *":$dir:"*) bin=benchpress ;;
-        *)
-            bin="$dir/benchpress"
-            say ""
-            say "$dir is not on your PATH. Add it with:"
-            say "  echo 'export PATH=\"$dir:\$PATH\"' >> ~/.profile"
-            ;;
-    esac
-
-    if [ "$#" -gt 0 ]; then
-        rm -rf "$tmp"
-        trap - EXIT INT TERM
-        if (: </dev/tty) 2>/dev/null; then
-            exec "$bin" "$@" </dev/tty
-        fi
-        exec "$bin" "$@"
+    if [ "$mode" = install ]; then
+        mkdir -p "$dir"
+        mv "$tmp/benchpress" "$dir/benchpress"
+        say "Installed benchpress to $dir/benchpress"
+        case ":$PATH:" in
+            *":$dir:"*) say "Run it with: benchpress" ;;
+            *)
+                say "$dir is not on your PATH. Add it with:"
+                say "  echo 'export PATH=\"$dir:\$PATH\"' >> ~/.profile"
+                ;;
+        esac
+        return 0
     fi
-    say ""
-    say "Run it with: benchpress run"
+
+    bin="$tmp/benchpress"
+    if ! "$bin" --version >/dev/null 2>&1; then
+        cache=${XDG_CACHE_HOME:-$HOME/.cache}/benchpress-launcher
+        mkdir -p "$cache"
+        run_dir=$(mktemp -d "$cache/run.XXXXXX") || fail "could not create a directory in $cache"
+        trap 'rm -rf "$tmp" "$run_dir"; rmdir "$cache" 2>/dev/null' EXIT
+        mv "$bin" "$run_dir/benchpress"
+        bin="$run_dir/benchpress"
+        "$bin" --version >/dev/null 2>&1 || fail "the downloaded binary does not run here. Set TMPDIR to a directory that allows executables."
+    fi
+
+    trap ':' INT
+    status=0
+    if (: </dev/tty) 2>/dev/null; then
+        BENCHPRESS_EPHEMERAL=1 "$bin" "$@" </dev/tty || status=$?
+    else
+        BENCHPRESS_EPHEMERAL=1 "$bin" "$@" || status=$?
+    fi
+    return "$status"
 }
 
 main "$@"

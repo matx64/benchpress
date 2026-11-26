@@ -181,6 +181,8 @@ pub fn run(
     workdir: &Path,
     stamp: &str,
 ) -> Result<Outcome> {
+    let _active = interrupt::RunActive::new();
+    let _lock = paths::lock_runs(false)?;
     let m = &suite.manifest;
     let started_at = time::OffsetDateTime::now_utc()
         .replace_nanosecond(0)

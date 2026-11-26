@@ -1,5 +1,7 @@
 //! Small subcommands. `run` lives in its own module.
 
+pub mod data;
+pub mod menu;
 pub mod run;
 
 use anyhow::Result;
@@ -9,7 +11,9 @@ use benchpress_core::result::BenchResult;
 use benchpress_core::validate::validate_result;
 
 use crate::output::{self, Role, paint};
-use crate::{paths, probe, report, runner, submit, toolchain};
+use std::process::ExitCode;
+
+use crate::{interrupt, paths, probe, report, runner, submit};
 
 /// `benchpress list`.
 pub fn list() -> Result<()> {
@@ -38,6 +42,24 @@ fn load(path: &std::path::Path) -> Result<BenchResult> {
     Ok(serde_json::from_str(&std::fs::read_to_string(path)?)?)
 }
 
+/// One line describing a local result, or `None` if it can't be read.
+pub fn result_line(id: &str, path: &std::path::Path) -> Option<String> {
+    let r = load(path).ok()?;
+    let headline = r
+        .scenario("clean-release")
+        .or(r.scenarios.first())
+        .map(|s| duration_ms(s.summary.median_wall_ms))
+        .unwrap_or_default();
+    let published = submit::load_submission(path)
+        .map(|s| paint(Role::You, &s.url))
+        .unwrap_or_default();
+    Some(format!(
+        "{id:<34} {:>9}  {}  {published}",
+        headline,
+        paint(Role::Muted, &r.machine_line())
+    ))
+}
+
 /// `benchpress results`.
 pub fn results_list() -> Result<()> {
     let all = submit::list_local()?;
@@ -46,20 +68,9 @@ pub fn results_list() -> Result<()> {
         return Ok(());
     }
     for (id, path) in all {
-        let Ok(r) = load(&path) else { continue };
-        let headline = r
-            .scenario("clean-release")
-            .or(r.scenarios.first())
-            .map(|s| duration_ms(s.summary.median_wall_ms))
-            .unwrap_or_default();
-        let published = submit::load_submission(&path)
-            .map(|s| paint(Role::You, &s.url))
-            .unwrap_or_default();
-        output::line(format!(
-            "{id:<34} {:>9}  {}  {published}",
-            headline,
-            paint(Role::Muted, &r.machine_line())
-        ));
+        if let Some(l) = result_line(&id, &path) {
+            output::line(l);
+        }
     }
     Ok(())
 }
@@ -210,18 +221,31 @@ pub fn doctor() -> Result<()> {
 }
 
 /// `benchpress clean`.
-pub fn clean() -> Result<()> {
-    toolchain::remove_all()?;
-    for dir in [
-        paths::sources_dir()?,
-        paths::build_cargo_home()?,
-        paths::work_root(),
-    ] {
-        if dir.exists() {
-            std::fs::remove_dir_all(&dir)?;
-            output::line(format!("Removed {}", dir.display()));
-        }
+pub fn clean(all: bool) -> Result<()> {
+    if !data::remove_downloads()? {
+        return Ok(());
     }
-    output::line("Cached toolchains, sources and build directories removed. Results were kept.");
+    if all {
+        data::remove_results()?;
+        output::line("Toolchains, sources, build directories and results removed.");
+    } else {
+        output::line("Toolchains, sources and build directories removed. Results were kept.");
+    }
     Ok(())
+}
+
+/// Print an error the way the CLI reports it, and pick the exit code.
+pub fn report_error(e: &anyhow::Error) -> ExitCode {
+    if e.downcast_ref::<interrupt::Interrupted>().is_some() || interrupt::is_set() {
+        output::blank();
+        output::line(
+            "Canceled. Edited source files were restored and the build directory removed.",
+        );
+        ExitCode::from(130)
+    } else if e.downcast_ref::<runner::measure::CommandFailed>().is_some() {
+        ExitCode::FAILURE
+    } else {
+        output::error(format!("{e:#}"));
+        ExitCode::FAILURE
+    }
 }

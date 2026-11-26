@@ -52,11 +52,13 @@ The submit rate limit (10 per hour per IPv4 address or IPv6 /64) reads the clien
 
 ## Deploys
 
-`.github/workflows/deploy.yml` runs after CI passes for a push to `main`. It compares `HEAD` with the commit recorded in `/var/lib/benchpress/deployed-sha` on the host, and deploys when anything under `crates/server`, `crates/core`, `suites/`, `install.sh` or `Cargo.lock` changed since then. It builds a musl binary, copies it over SSH, restarts the unit, checks `/healthz` and records the new commit. It skips commits that are already deployed or older than the deployed one. A manual run always deploys. It needs:
+Workflows run only when you publish a GitHub release, so day-to-day pushes cost no Actions minutes. `.github/workflows/release.yml` runs CI, builds the CLI for every target, uploads the archives to the release, and then calls `.github/workflows/deploy.yml`. Deploy builds a musl server binary from the release tag, copies it over SSH, restarts the unit and checks `/healthz`. You can also run Deploy by hand from the Actions tab. It needs:
 
-- repository variables `DEPLOY_HOST` and `DEPLOY_USER`; the workflow skips itself while `DEPLOY_HOST` is unset,
+- repository variables `DEPLOY_HOST` and `DEPLOY_USER`; deploy skips itself while `DEPLOY_HOST` is unset,
 - secrets `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`,
-- passwordless `sudo` on the host for `install`, `tee /var/lib/benchpress/deployed-sha` and `systemctl restart benchpress-server`.
+- passwordless `sudo` on the host for `install` and `systemctl restart benchpress-server`.
+
+Tag releases `v<workspace version>` (for example `v0.1.0` for `version = "0.1.0"` in `Cargo.toml`); the workflow stops when they differ. The server serves `run.sh` pinned to the release it was built from, so `curl … /run | sh` keeps downloading the previous release while a new one is tested and built, and switches once deploy finishes. Run `run.sh` from the repository and it falls back to `releases/latest`. If CI fails, the release stays without archives: fix the problem, delete the release and its tag, and publish again.
 
 ## Backups
 

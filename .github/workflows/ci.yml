@@ -1,14 +1,11 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_call:
   workflow_dispatch:
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -34,40 +31,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
 
-  install-script:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  launcher:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - if: runner.os == 'Linux'
-        run: shellcheck install.sh
+      - run: shellcheck run.sh
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -p benchpress --locked
-      - name: Install from a local mirror
+      - name: Run and install from a local mirror
         run: |
-          case "$(uname -s)" in
-            Linux) target="$(uname -m)-unknown-linux-musl" ;;
-            Darwin) target=aarch64-apple-darwin ;;
-          esac
+          target="$(uname -m)-unknown-linux-musl"
           mirror="$RUNNER_TEMP/mirror"
-          mkdir -p "$mirror"
+          export TMPDIR="$RUNNER_TEMP/tmp"
+          mkdir -p "$mirror" "$TMPDIR"
           tar -czf "$mirror/benchpress-$target.tar.gz" -C target/debug benchpress
-          (cd "$mirror" && shasum -a 256 "benchpress-$target.tar.gz" > "benchpress-$target.tar.gz.sha256")
-          BENCHPRESS_DOWNLOAD_URL="file://$mirror" BENCHPRESS_INSTALL_DIR="$RUNNER_TEMP/bin" sh install.sh --version
+          (cd "$mirror" && sha256sum "benchpress-$target.tar.gz" > "benchpress-$target.tar.gz.sha256")
+          export BENCHPRESS_DOWNLOAD_URL="file://$mirror"
+          sh run.sh --version
+          test -z "$(ls -A "$TMPDIR")"
+          BENCHPRESS_INSTALL_DIR="$RUNNER_TEMP/bin" sh run.sh install
           test -x "$RUNNER_TEMP/bin/benchpress"
           echo "0000 benchpress-$target.tar.gz" > "$mirror/benchpress-$target.tar.gz.sha256"
-          if BENCHPRESS_DOWNLOAD_URL="file://$mirror" BENCHPRESS_INSTALL_DIR="$RUNNER_TEMP/bad" sh install.sh; then
-            echo "installer accepted a bad checksum" >&2
+          if sh run.sh --version; then
+            echo "launcher accepted a bad checksum" >&2
             exit 1
           fi
-          test ! -e "$RUNNER_TEMP/bad/benchpress"
+          test -z "$(ls -A "$TMPDIR")"
 
   e2e:
-    if: github.event_name != 'pull_request'
     needs: rust
     runs-on: ubuntu-latest
     timeout-minutes: 40

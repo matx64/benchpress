@@ -103,7 +103,16 @@ fn serve(name: &str, immutable: bool) -> Response {
         .into_response()
 }
 
-const INSTALL_SH: &str = include_str!("../../../install.sh");
+/// Release tag this server was built from; the launcher it serves downloads that release.
+pub const RELEASE_TAG: &str = concat!("v", env!("CARGO_PKG_VERSION"));
+
+static RUN_SH: LazyLock<String> = LazyLock::new(|| {
+    include_str!("../../../run.sh").replacen(
+        "version=${BENCHPRESS_VERSION:-latest}",
+        &format!("version=${{BENCHPRESS_VERSION:-{RELEASE_TAG}}}"),
+        1,
+    )
+});
 
 /// Asset routes.
 pub fn routes() -> Router<Arc<AppState>> {
@@ -134,21 +143,21 @@ pub fn routes() -> Router<Arc<AppState>> {
             get(|| async { serve("social/og-default.png", false) }),
         )
         .route(
-            "/install.sh",
+            "/run",
             get(|| async {
                 (
                     [
                         (header::CONTENT_TYPE, "text/x-shellscript; charset=utf-8"),
                         (header::CACHE_CONTROL, "public, max-age=300"),
                     ],
-                    INSTALL_SH,
+                    RUN_SH.as_str(),
                 )
             }),
         )
         .route("/robots.txt", get(|| async { "User-agent: *\nAllow: /\n" }))
 }
 
-/// SHA-256 of install.sh, shown on the install page.
-pub fn install_sh_sha256() -> String {
-    hex::encode(Sha256::digest(INSTALL_SH.as_bytes()))
+/// SHA-256 of run.sh, shown on the start page.
+pub fn run_sh_sha256() -> String {
+    hex::encode(Sha256::digest(RUN_SH.as_bytes()))
 }

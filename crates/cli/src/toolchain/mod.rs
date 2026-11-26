@@ -130,13 +130,3 @@ fn set_executable(path: &Path) -> Result<()> {
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))?;
     Ok(())
 }
-
-/// Remove every cached toolchain.
-pub fn remove_all() -> Result<()> {
-    for dir in [paths::rustup_home()?, paths::rustup_cargo_home()?] {
-        if dir.exists() {
-            std::fs::remove_dir_all(&dir).with_context(|| format!("removing {}", dir.display()))?;
-        }
-    }
-    Ok(())
-}

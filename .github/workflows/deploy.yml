@@ -1,11 +1,11 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy
@@ -13,11 +13,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: >-
-      vars.DEPLOY_HOST != '' && (github.event_name == 'workflow_dispatch' || (
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_repository.full_name == github.repository))
+    if: vars.DEPLOY_HOST != ''
     runs-on: ubuntu-24.04
     environment: production
     env:
@@ -25,9 +21,6 @@ jobs:
       USER: ${{ vars.DEPLOY_USER }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Configure SSH
         env:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -36,39 +29,12 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-      - id: changes
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          deployed=$(ssh "$USER@$HOST" 'cat /var/lib/benchpress/deployed-sha 2>/dev/null' || true)
-          git fetch -q origin main
-          known() { [ -n "$deployed" ] && git cat-file -e "$deployed" 2>/dev/null; }
-          if [ "$EVENT" = workflow_dispatch ]; then
-            server=true
-          elif ! git merge-base --is-ancestor HEAD origin/main; then
-            server=false
-          elif ! known; then
-            server=true
-          elif git merge-base --is-ancestor HEAD "$deployed"; then
-            server=false
-          elif git diff --name-only "$deployed" HEAD | grep -qE '^(crates/(server|core)/|suites/|install.sh|Cargo.lock)'; then
-            server=true
-          else
-            server=false
-          fi
-          echo "server=$server" >> "$GITHUB_OUTPUT"
-      - if: steps.changes.outputs.server == 'true'
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-      - if: steps.changes.outputs.server == 'true'
-        run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
-      - if: steps.changes.outputs.server == 'true'
-        uses: Swatinem/rust-cache@v2
-      - if: steps.changes.outputs.server == 'true'
-        run: cargo build -p benchpress-server --release --locked --target x86_64-unknown-linux-musl
-      - if: steps.changes.outputs.server == 'true'
-        name: Upload and restart
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p benchpress-server --release --locked --target x86_64-unknown-linux-musl
+      - name: Upload and restart
         run: |
           scp target/x86_64-unknown-linux-musl/release/benchpress-server "$USER@$HOST:/tmp/benchpress-server"
           ssh "$USER@$HOST" 'sudo install -m 755 /tmp/benchpress-server /usr/local/bin/benchpress-server && sudo systemctl restart benchpress-server'
           ssh "$USER@$HOST" 'for _ in $(seq 20); do curl -fsS http://127.0.0.1:8080/healthz && exit 0; sleep 2; done; exit 1'
-          ssh "$USER@$HOST" "echo $(git rev-parse HEAD) | sudo tee /var/lib/benchpress/deployed-sha >/dev/null"

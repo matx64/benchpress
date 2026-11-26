@@ -29,10 +29,7 @@ impl Views {
             "sprite",
             Value::from_safe_string(include_str!("../assets/sprite.svg").to_owned()),
         );
-        env.add_global(
-            "install_cmd",
-            format!("curl -fsSL {public_url}/install.sh | sh"),
-        );
+        env.add_global("install_cmd", format!("curl -fsSL {public_url}/run | sh"));
         env.add_function("asset", |name: &str| {
             Value::from_safe_string(assets::url(name))
         });
