@@ -1,7 +1,7 @@
 {
   "name": "Benchpress",
   "short_name": "Benchpress",
-  "description": "Rust compile-time benchmarks from real machines.",
+  "description": "Compile-time benchmarks from real machines.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1B2026",

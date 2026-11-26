@@ -180,6 +180,7 @@
   .home-hero { padding-block: var(--bp-space-7) var(--bp-space-4); text-align: center; display: grid; justify-items: center; }
   .home-hero h1 { font-size: clamp(var(--bp-size-2xl), 7vw, var(--bp-size-4xl)); max-width: 16ch; }
   .home-hero .lede { max-width: 60ch; margin-top: var(--bp-space-5); }
+  .suites-note { max-width: 70ch; margin: calc(-1 * var(--bp-space-3)) 0 var(--bp-space-5); }
   .hero-cmd { width: 100%; max-width: 60rem; margin-top: var(--bp-space-7); text-align: left; }
   .hero-cmd .cmd { background: var(--bp-surface); }
   .hero-cmd .cmd code { font-size: var(--bp-size-sm); padding: var(--bp-space-4) var(--bp-space-5); }

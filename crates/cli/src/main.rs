@@ -1,4 +1,4 @@
-//! `benchpress`: benchmark Rust compile times on this machine.
+//! `benchpress`: benchmark compile times on this machine.
 
 mod commands;
 mod fetch;
@@ -18,7 +18,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
-/// Know what your machine can lift. Rust compile-time benchmarks from real machines.
+/// Know what your machine can lift. Compile-time benchmarks from real machines.
 #[derive(Parser)]
 #[command(name = "benchpress", version, about, long_about = None)]
 struct Cli {

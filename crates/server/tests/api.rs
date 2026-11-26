@@ -108,6 +108,15 @@ async fn submit_show_unpublish() {
 
     let steps = [
         Step {
+            name: "run command",
+            method: Method::GET,
+            path: "/run",
+            token: None,
+            body: None,
+            status: StatusCode::TEMPORARY_REDIRECT,
+            code: None,
+        },
+        Step {
             name: "duplicate",
             method: Method::POST,
             path: "/api/v1/results",

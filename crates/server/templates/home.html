@@ -2,9 +2,9 @@
 {% from "macros.html" import tier, install_box %}
 {% block main %}
 <section class="home-hero" aria-labelledby="hero-title">
-  <p class="eyebrow">Rust compile-time benchmarks</p>
-  <h1 id="hero-title" class="display">How fast does your machine build Rust?</h1>
-  <p class="lede">Benchpress compiles real open source Rust projects with pinned toolchains, times every build, and shows where your machine ranks against others. One command, nothing to install, and results stay on your machine unless you publish them.</p>
+  <p class="eyebrow">Compile-time benchmarks</p>
+  <h1 id="hero-title" class="display">How fast does your machine build code?</h1>
+  <p class="lede">Benchpress builds real open source projects with pinned compilers, times every build, and shows where your machine ranks against others. You need one command and no compiler, and results stay on your machine unless you publish them.</p>
   <div class="hero-cmd">{{ install_box("install-cmd") }}</div>
   <p class="muted hero-note"><small>Linux (x86_64, arm64) and Apple Silicon Macs. No sudo, nothing left behind. <a href="/start">What the script does</a></small></p>
 </section>
@@ -18,7 +18,7 @@
   <div class="step">
     <span class="step-n num">2</span>
     <h2>Pick a suite</h2>
-    <p class="muted">Benchpress fetches a pinned Rust toolchain and project sources, then times clean and incremental builds several times each.</p>
+    <p class="muted">Benchpress downloads the exact compiler and sources the suite pins into its own cache, then times clean and incremental builds several times each. Compilers you already have are never used or changed.</p>
   </div>
   <div class="step">
     <span class="step-n num">3</span>
@@ -45,6 +45,7 @@
 
 <section class="section" aria-labelledby="tiers-title">
   <div class="section-head"><h2 id="tiers-title">Three suites, light to heavy</h2><a href="/suites">Suite details</a></div>
+  <p class="muted suites-note">The first suites build Rust projects, because Rust's tooling makes an exact build easy to pin and repeat. You do not need Rust installed. Suites for other languages can follow.</p>
   <div class="cols-3">
     {% for s in tiers %}
     <article class="tier-card">

@@ -2,8 +2,8 @@
 # Benchpress launcher: downloads the latest release binary for this machine into a
 # temporary directory, verifies its SHA-256 checksum, runs it and deletes it on exit.
 #
-#   curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh                     open the menu
-#   curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh -s -- run quick     any benchpress command
+#   curl -fsSL https://benchpress.matx.dev/run | sh                     open the menu
+#   curl -fsSL https://benchpress.matx.dev/run | sh -s -- run quick     any benchpress command
 #
 # Environment: BENCHPRESS_VERSION (a release tag; the copy attached to each release pins
 # that release, otherwise latest),

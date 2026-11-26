@@ -279,7 +279,7 @@ async fn home(State(state): State<Arc<AppState>>, jar: CookieJar, headers: Heade
         .collect();
     let mut ctx = p.base(
         "Benchpress",
-        "Know what your machine can lift. Rust compile-time benchmarks from real machines.",
+        "Know what your machine can lift. Compile-time benchmarks from real machines.",
         "/",
         "home",
     );

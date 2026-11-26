@@ -1,6 +1,6 @@
 [package]
 name = "benchpress"
-description = "Benchmark Rust compile times on your machine and compare with others"
+description = "Benchmark how fast your machine compiles code and compare with others"
 readme = "../../README.md"
 keywords = ["benchmark", "cargo", "compile-time", "hardware"]
 categories = ["command-line-utilities", "development-tools"]

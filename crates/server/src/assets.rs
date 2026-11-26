@@ -6,7 +6,7 @@ use std::sync::{Arc, LazyLock};
 use axum::Router;
 use axum::extract::Path;
 use axum::http::{StatusCode, header};
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
 use sha2::{Digest, Sha256};
 
@@ -103,7 +103,7 @@ fn serve(name: &str, immutable: bool) -> Response {
         .into_response()
 }
 
-/// Where the launcher is fetched from. Switch to
+/// Where `/run` redirects. Switch to
 /// `https://github.com/matx64/benchpress/releases/latest/download/run.sh` after the first release.
 pub const RUN_URL: &str = "https://raw.githubusercontent.com/matx64/benchpress/main/run.sh";
 
@@ -138,5 +138,6 @@ pub fn routes() -> Router<Arc<AppState>> {
             "/social/og-default.png",
             get(|| async { serve("social/og-default.png", false) }),
         )
+        .route("/run", get(|| async { Redirect::temporary(RUN_URL) }))
         .route("/robots.txt", get(|| async { "User-agent: *\nAllow: /\n" }))
 }

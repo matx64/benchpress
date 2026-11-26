@@ -9,13 +9,15 @@ Benchpress measures how fast your computer compiles software. It builds a well-k
 
 Use it to compare laptops before you buy, check whether an upgrade paid off, or see how a new machine stacks up before you trust it with real work.
 
+The first suites build Rust projects, because Rust's tooling makes an exact build easy to pin and repeat. You do not need Rust installed: Benchpress downloads each suite's toolchain into its own cache and reuses it on later runs. Suites for other languages can follow.
+
 ## Run it, nothing to install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh
+curl -fsSL https://benchpress.matx.dev/run | sh
 ```
 
-This works on Linux (x86_64 and arm64) and Apple Silicon Macs, and never uses `sudo`. The command fetches [`run.sh`](run.sh) from this repository, so you can read it first. The script:
+This works on Linux (x86_64 and arm64) and Apple Silicon Macs, and never uses `sudo`. `benchpress.matx.dev/run` redirects to [`run.sh`](run.sh) in this repository, so you can read it first. The script:
 
 1. downloads one static binary from the latest release into a temporary directory and checks its SHA-256;
 2. opens a menu in your terminal, where every action returns to the menu and Ctrl+C cancels a running benchmark;
@@ -24,7 +26,7 @@ This works on Linux (x86_64 and arm64) and Apple Silicon Macs, and never uses `s
 To skip the menu, pass a command after `sh -s --`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh -s -- run quick
+curl -fsSL https://benchpress.matx.dev/run | sh -s -- run quick
 ```
 
 <!-- TODO: screenshot of a result page -->

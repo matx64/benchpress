@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="{% if theme %}{{ theme }}{% else %}dark light{% endif %}">
 <meta name="theme-color" content="#1B2026" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#F4F5F3" media="(prefers-color-scheme: light)">
-<title>{% if title == "Benchpress" %}Benchpress · Rust compile-time benchmarks{% else %}{{ title }} · Benchpress{% endif %}</title>
+<title>{% if title == "Benchpress" %}Benchpress · Compile-time benchmarks{% else %}{{ title }} · Benchpress{% endif %}</title>
 <meta name="description" content="{{ description }}">
 {% if path %}<link rel="canonical" href="{{ public_url }}{{ path }}">{% endif %}
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -48,7 +48,7 @@
 </main>
 <footer class="site-footer">
   <div class="wrap">
-    <p>Know what your machine can lift. Rust compile-time benchmarks from real machines.</p>
+    <p>Know what your machine can lift. Compile-time benchmarks from real machines.</p>
     <nav aria-label="Footer">
       <a href="https://github.com/matx64/benchpress">Source on GitHub</a>
       <a href="/about#privacy">Privacy</a>
