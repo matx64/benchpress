@@ -3,7 +3,7 @@
   <img alt="Benchpress" src="docs/assets/banner-light.png">
 </picture>
 
-<br>
+###
 
 Benchpress measures how fast your computer compiles software. It builds a well-known open source project several ways, from a clean release build to a one-line incremental rebuild, and times each one. Every machine builds the same source with the same compiler version, so the times are comparable. You can publish your result to [benchpress.dev](https://benchpress.dev) and see how your machine ranks against others with the same CPU, memory or OS.
 
