@@ -7,14 +7,14 @@ The server is one static binary and one SQLite file. Production runs on one Fly.
 You need [`flyctl`](https://fly.io/docs/flyctl/install/) and a Fly.io account. From the repository root:
 
 ```sh
-fly apps create benchpress
-fly volumes create benchpress_data --app benchpress --region gru --size 1 --snapshot-retention 30 --yes
-fly secrets set --app benchpress --stage BENCHPRESS_ADMIN_TOKEN="$(openssl rand -hex 32)"
+fly apps create benchpress-matx
+fly volumes create benchpress_data --app benchpress-matx --region gru --size 1 --snapshot-retention 30 --yes
+fly secrets set --app benchpress-matx --stage BENCHPRESS_ADMIN_TOKEN="$(openssl rand -hex 32)"
 fly deploy
-fly certs add benchpress.matx.dev --app benchpress
+fly certs add benchpress.matx.dev --app benchpress-matx
 ```
 
-`fly certs add` prints the DNS records to create. In Cloudflare, add a `CNAME` from `benchpress` to `benchpress.fly.dev` with the proxy turned off, so Fly can issue the certificate.
+`fly certs add` prints the DNS records to create. In Cloudflare, add a `CNAME` from `benchpress` to `benchpress-matx.fly.dev` with the proxy turned off, so Fly can issue the certificate.
 
 The machine stops when no requests arrive and starts on the next one, so the first request after a quiet period takes a second or two. It keeps one SQLite file on the `benchpress_data` volume, so the app runs on exactly one machine. Never scale it out. The server creates the database and applies migrations on start.
 
@@ -45,7 +45,7 @@ Workflows run only when you publish a GitHub release, so pushes to `main` cost n
 
 Every release that is not a pre-release ends up as latest, even if you unticked "Set as the latest release". Releases run one at a time. If the tag check or CI fails, the release stays a pre-release without archives. Fix the problem, delete the release and its tag, and publish again.
 
-Deploy runs `fly deploy --remote-only`, which builds `Dockerfile` on Fly's builders and rolls the machine. You can also start it by hand from the Actions tab, or run `fly deploy` locally. It needs the repository secret `FLY_API_TOKEN`, created with `fly tokens create deploy --app benchpress`.
+Deploy runs `fly deploy --remote-only`, which builds `Dockerfile` on Fly's builders and rolls the machine. You can also start it by hand from the Actions tab, or run `fly deploy` locally. It needs the repository secret `FLY_API_TOKEN`, created with `fly tokens create deploy --app benchpress-matx`.
 
 ### After the first release
 
@@ -60,16 +60,16 @@ Until a release exists, the run command fetches `run.sh` from `main`, and that s
 Fly snapshots the volume once a day and keeps each snapshot for 30 days. Unpublishing deletes a row, so a deleted result leaves the backups 30 days later. The privacy section of the about page says so. To restore, list the snapshots and create a new volume from one:
 
 ```sh
-fly volumes list --app benchpress
+fly volumes list --app benchpress-matx
 fly volumes snapshots list <volume-id>
-fly volumes create benchpress_data --app benchpress --region gru --snapshot-id <snapshot-id>
+fly volumes create benchpress_data --app benchpress-matx --region gru --snapshot-id <snapshot-id>
 ```
 
 Then destroy the old machine's volume and run `fly deploy`, so the new machine mounts the restored one.
 
 ## Monitoring
 
-`fly logs --app benchpress` streams the JSON logs. Alert on lines with `"level":"ERROR"`. The server logs every 500 response at that level. An uptime checker on `https://benchpress.matx.dev/healthz` would keep the machine awake around the clock, so check it no more than every few hours, or not at all.
+`fly logs --app benchpress-matx` streams the JSON logs. Alert on lines with `"level":"ERROR"`. The server logs every 500 response at that level. An uptime checker on `https://benchpress.matx.dev/healthz` would keep the machine awake around the clock, so check it no more than every few hours, or not at all.
 
 ## Never
 
