@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Benchpress times Rust builds on a user's machine and publishes the results to benchpress.dev. This file is a map. Follow the references into the code, which is the source of truth.
+Benchpress times Rust builds on a user's machine and publishes the results to benchpress.matx.dev. This file is a map. Follow the references into the code, which is the source of truth.
 
 ## Checks
 

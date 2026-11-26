@@ -13,7 +13,7 @@ use crate::{fetch, paths};
 /// Base URL of the website. TODO(decision): final domain.
 pub fn server_url() -> String {
     std::env::var("BENCHPRESS_SERVER")
-        .unwrap_or_else(|_| "https://benchpress.dev".into())
+        .unwrap_or_else(|_| "https://benchpress.matx.dev".into())
         .trim_end_matches('/')
         .to_owned()
 }

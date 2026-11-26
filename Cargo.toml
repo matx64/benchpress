@@ -9,7 +9,7 @@ edition = "2024"
 rust-version = "1.99"
 license = "MIT"
 repository = "https://github.com/matx64/benchpress"
-homepage = "https://benchpress.dev"
+homepage = "https://benchpress.matx.dev"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

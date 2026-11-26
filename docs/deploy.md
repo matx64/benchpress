@@ -2,7 +2,7 @@
 
 The server is one static binary and one SQLite file. Production runs on a small VPS with Caddy for TLS and Litestream for continuous backups.
 
-<!-- TODO(decision): hosting provider and final domain. The defaults below assume a Hetzner-class VPS and benchpress.dev. -->
+<!-- TODO(decision): hosting provider. The defaults below assume a Debian or Ubuntu VPS. -->
 
 ## One-time setup
 
@@ -89,7 +89,7 @@ sqlite3 /tmp/restore.db 'select count(*) from results'
 
 ## Monitoring
 
-Point an uptime checker at `https://benchpress.dev/healthz`. With `BENCHPRESS_LOG_FORMAT=json`, alert on log lines with `"level":"ERROR"`. The server logs every 500 response at that level.
+Point an uptime checker at `https://benchpress.matx.dev/healthz`. With `BENCHPRESS_LOG_FORMAT=json`, alert on log lines with `"level":"ERROR"`. The server logs every 500 response at that level.
 
 ## Never
 
