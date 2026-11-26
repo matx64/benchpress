@@ -21,7 +21,7 @@
 
 ## Tests
 
-The suite stays small. Tests cover contracts: suite hashes against `suites.lock`, validation rules, the privacy of a result, isolation from the user's cargo settings, the API's submit and unpublish flow, and the end-to-end CI job. Add a row to the existing table test before adding a new test. Do not snapshot HTML or SVG.
+The suite stays small and covers contracts only: suite hashes against `suites.lock`, validation rules, the privacy of a result, isolation from the user's cargo settings, outlier grouping, the API's submit and unpublish flow, and the end-to-end CI job. Add a row to an existing table test before you write a new test. Do not snapshot HTML or SVG.
 
 ## Web
 

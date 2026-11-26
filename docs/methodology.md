@@ -4,7 +4,7 @@ This page describes what a Benchpress run measures and how the site turns runs i
 
 ## What runs
 
-A suite pins one Rust project at an exact commit and one exact toolchain version. The CLI downloads the project's source archive and checks its SHA-256 against the manifest. It installs the toolchain into its own rustup home under the Benchpress cache, so the run never uses or changes your toolchains. Build directories live outside your home directory and are removed after every run, including after Ctrl-C; see [Local data](../README.md#local-data) for where everything goes and how to remove it. `cargo fetch` downloads dependencies before any timing starts, and every timed build passes `--locked --offline`.
+A suite pins one Rust project at an exact commit and one exact toolchain version. The CLI downloads the project's source archive and checks its SHA-256 against the manifest. It installs the toolchain into its own rustup home under the Benchpress cache, so the run never uses or changes your toolchains. Build directories live outside your home directory and are removed after every run, including after Ctrl-C. [Local data](../README.md#local-data) lists where everything goes and how to remove it. `cargo fetch` downloads dependencies before any timing starts, and every timed build passes `--locked --offline`.
 
 Each suite has five scenarios:
 
@@ -44,7 +44,7 @@ The server accepts results taken in poor conditions but marks them. Charts and r
 | Low power | low power mode or a power-saving profile was active |
 | Virtualized | the CLI detected a virtual machine or container |
 | High variance | a scenario's coefficient of variation is above 10% |
-| Outlier | a scenario's median is more than 1.5 times faster or slower than the median of at least four other unflagged results from the same suite version, CPU, RAM size and OS, when at least two thirds of those results are within 1.5 times of their median. The server recomputes this whenever results change and never stores it, so a result that later finds agreeing peers rejoins the comparisons |
+| Outlier | a scenario's median is more than 1.5 times faster or slower than the median of at least four other unflagged results with the same suite version, CPU family, RAM size and OS, and at least two thirds of those results lie within 1.5 times of the peers' median. The server recomputes this flag whenever results change and never stores it, so the result rejoins comparisons once enough results agree with it |
 
 ## Validation
 
@@ -52,7 +52,7 @@ The server rejects a result when its suite hash does not match the suite it name
 
 ## Integrity
 
-Results are measured on machines the server does not control, so nothing can prove that a submitted number came from a real run: anyone can modify the open-source client or post JSON by hand. Benchpress makes faked results costly to submit and limits what they can change:
+Results come from machines the server does not control, so nothing can prove that a submitted number came from a real run. Anyone can modify the open-source client or post JSON by hand. Benchpress makes fake results costly to submit and limits what they can change.
 
 - Validation rejects documents that no real run could produce, as described above.
 - Outlier detection holds back a result that disagrees with its configuration's peers when at least two thirds of those peers agree with each other, so one fake result cannot move a configuration's numbers once it has a few honest results. Many coordinated fakes still can. Medians, not means, drive every chart and ranking.

@@ -48,23 +48,39 @@ The unit runs the server under `litestream replicate -exec`, so replication star
 | `BENCHPRESS_LOG_FORMAT` | text | `json` for structured logs. |
 | `BENCHPRESS_LOG` | `info` | Log filter, in `RUST_LOG` syntax. |
 
-The submit rate limit (10 per hour per IPv4 address or IPv6 /64) reads the client IP from `X-Forwarded-For`. Caddy 2.5 and later replace any `X-Forwarded-For` a client sends unless you configure `trusted_proxies`, so clients cannot spoof it. Do not expose port 8080 directly. `BENCHPRESS_ADMIN_TOKEN` must be at least 32 characters or the server refuses to start; generate one with `openssl rand -hex 32`.
+The submit rate limit (a burst of 10, then one every six minutes, per IPv4 address or IPv6 /64) reads the client IP from `X-Forwarded-For`. Caddy 2.5 and later replace any `X-Forwarded-For` a client sends unless you configure `trusted_proxies`, so clients cannot spoof it. Do not expose port 8080 directly. `BENCHPRESS_ADMIN_TOKEN` must be at least 32 characters or the server refuses to start; generate one with `openssl rand -hex 32`.
 
-## Deploys
+## Releases and deploys
 
-Workflows run only when you publish a GitHub release, so day-to-day pushes cost no Actions minutes. `.github/workflows/release.yml` runs CI, builds the CLI for every target, uploads the archives to the release, and then calls `.github/workflows/deploy.yml`. Deploy builds a musl server binary from the release tag, copies it over SSH, restarts the unit and checks `/healthz`. You can also run Deploy by hand from the Actions tab. It needs:
+Workflows run only when you publish a GitHub release, so pushes to `main` cost no Actions minutes. Tag each release `v<workspace version>`, for example `v0.1.0` for `version = "0.1.0"` in `Cargo.toml`. The workflow stops when the two differ.
 
-- repository variables `DEPLOY_HOST` and `DEPLOY_USER`; deploy skips itself while `DEPLOY_HOST` is unset,
-- secrets `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`,
+`.github/workflows/release.yml` then:
+
+1. marks the release as a pre-release, so GitHub's "latest" keeps pointing at the previous release while this one builds;
+2. runs the CI workflow;
+3. builds the CLI for every target and uploads the archives, their checksums, `SHA256SUMS` and a copy of `run.sh` pinned to the new tag;
+4. marks the release as latest, unless you published it as a pre-release;
+5. calls `.github/workflows/deploy.yml`.
+
+Every release that is not a pre-release ends up as latest, even if you unticked "Set as the latest release". Releases run one at a time. If the tag check or CI fails, the release stays a pre-release without archives. Fix the problem, delete the release and its tag, and publish again.
+
+Deploy builds a musl server binary from the release tag, copies it over SSH, restarts the unit and checks `/healthz`. You can also start it by hand from the Actions tab. It needs:
+
+- repository variables `DEPLOY_HOST` and `DEPLOY_USER` (deploy skips itself while `DEPLOY_HOST` is unset);
+- secrets `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`;
 - passwordless `sudo` on the host for `install` and `systemctl restart benchpress-server`.
 
-Tag releases `v<workspace version>` (for example `v0.1.0` for `version = "0.1.0"` in `Cargo.toml`); the workflow stops when they differ. The workflow marks the release as a pre-release while it tests and builds, so GitHub's "latest" release keeps pointing at the previous one. After the upload, which includes a copy of `run.sh` pinned to the new tag, it marks the release as latest again; a release you published as a pre-release stays one. Every other release ends up as latest, even if you unticked "Set as the latest release", and releases run one at a time. If CI fails, the release stays a pre-release without archives: fix the problem, delete the release and its tag, and publish again.
+### After the first release
 
-The run command on the website, the README and the top of `run.sh` fetches `run.sh` from `main`, which downloads `releases/latest`. After the first release, switch all three, and `RUN_URL` in `crates/server/src/assets.rs`, to `https://github.com/matx64/benchpress/releases/latest/download/run.sh` so the script and binary always come from the same release.
+Until a release exists, the run command fetches `run.sh` from `main`, and that script downloads `releases/latest`. Once the first release is out, change the URL to `https://github.com/matx64/benchpress/releases/latest/download/run.sh` in these places, so the script and the binary always come from the same release:
+
+- `RUN_URL` in `crates/server/src/assets.rs`, which the website shows;
+- the commands in `README.md`;
+- the usage lines at the top of `run.sh`.
 
 ## Backups
 
-Litestream streams every WAL change to S3-compatible storage and keeps 30 days. Unpublishing deletes a row, so a deleted result disappears from backups once its 30 days pass; the privacy section of the about page says so. Test a restore before launch and after any Litestream upgrade:
+Litestream streams every WAL change to S3-compatible storage and keeps 30 days. Unpublishing deletes a row, so a deleted result leaves the backups 30 days later. The privacy section of the about page says so. Test a restore before launch and after any Litestream upgrade:
 
 ```sh
 litestream restore -config /etc/benchpress/litestream.yml -o /tmp/restore.db /var/lib/benchpress/benchpress.db
@@ -73,7 +89,7 @@ sqlite3 /tmp/restore.db 'select count(*) from results'
 
 ## Monitoring
 
-Point an uptime checker at `https://benchpress.dev/healthz`. With `BENCHPRESS_LOG_FORMAT=json`, alert on log lines with `"level":"ERROR"`; the server logs every 500 response at that level.
+Point an uptime checker at `https://benchpress.dev/healthz`. With `BENCHPRESS_LOG_FORMAT=json`, alert on log lines with `"level":"ERROR"`. The server logs every 500 response at that level.
 
 ## Never
 

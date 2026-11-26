@@ -5,17 +5,23 @@
 
 Know what your machine can lift. Benchpress builds real Rust projects with a pinned toolchain, times each build, and shows how your machine compares with others on [benchpress.dev](https://benchpress.dev).
 
-**Run it now, without installing:**
+## Run it, nothing to install
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh
 ```
 
-The command fetches [`run.sh`](run.sh) straight from this repository, so you can read it first.
+This works on Linux (x86_64 and arm64) and Apple Silicon Macs, and never uses `sudo`. The command fetches [`run.sh`](run.sh) from this repository, so you can read it first. The script:
 
-Linux (x86_64 and arm64) and Apple Silicon Macs. The script downloads one static binary into a temporary directory, verifies its SHA-256 checksum and opens a menu in your terminal. Every action returns to the menu, and Ctrl+C cancels a running benchmark. When you quit, the binary is deleted and Benchpress offers to remove the toolchains and sources it downloaded. It never uses `sudo`.
+1. downloads one static binary from the latest release into a temporary directory and checks its SHA-256;
+2. opens a menu in your terminal, where every action returns to the menu and Ctrl+C cancels a running benchmark;
+3. deletes the binary when you quit, after offering to remove the toolchains and sources it downloaded.
 
-Pass a command to skip the menu (`… | sh -s -- run quick`), or install the binary to `~/.local/bin` with `… | sh -s -- install`.
+To skip the menu, pass a command after `sh -s --`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh -s -- run quick
+```
 
 <!-- TODO: screenshot of a result page -->
 
@@ -27,9 +33,11 @@ Pass a command to skip the menu (`… | sh -s -- run quick`), or install the bin
 | `standard` | rust-analyzer 2026-11-16 | 8 to 30 minutes | 8 GB |
 | `heavy` | nushell 0.117.0 | 20 to 90 minutes | 14 GB |
 
-Each suite runs five scenarios three times: a clean debug build, a clean release build, `cargo check`, and two incremental rebuilds after editing a leaf crate and a core crate. The report shows the median of each.
+Each suite runs five scenarios three times: a clean debug build, a clean release build, `cargo check`, and two incremental rebuilds after editing a leaf crate and a core crate. The report shows the median of each. [docs/methodology.md](docs/methodology.md) explains what is measured and how the site compares results.
 
 ## Commands
+
+Every command works the same way through `run.sh` (`… | sh -s -- <command>`) and with an installed binary.
 
 ```
 benchpress                  open the menu
@@ -42,7 +50,9 @@ benchpress doctor           check the toolchain, disk space and power state
 benchpress clean [--all]    delete cached toolchains, sources and builds (--all: results too)
 ```
 
-Results stay on your machine until you run `submit` or confirm the prompt after a run. A published result has no username, hostname, IP address or file paths. See [docs/methodology.md](docs/methodology.md) for what is measured and how.
+## Privacy
+
+Results stay on your machine until you run `submit` or say yes to the prompt after a run. A published result contains no username, hostname, IP address or file path. You can unpublish it later from the machine that published it, as long as its local results folder still holds the unpublish token. `clean --all` and removing results in the menu delete the token.
 
 ## Local data
 
@@ -52,17 +62,21 @@ Results stay on your machine until you run `submit` or confirm the prompt after 
 | Build directories, removed after each run | `/var/tmp/benchpress-<uid>` | `$TMPDIR/benchpress` |
 | Results and unpublish tokens | `~/.local/share/benchpress` | `~/Library/Application Support/benchpress` |
 
-`BENCHPRESS_CACHE_DIR` and `BENCHPRESS_DATA_DIR` move the first and last. Manage local data in the menu shows how much each uses and removes them, or delete the folders yourself. Benchpress never touches your own `~/.rustup` or `~/.cargo`.
+`BENCHPRESS_CACHE_DIR` and `BENCHPRESS_DATA_DIR` move the first and last. "Manage local data" in the menu shows how much space each one uses and removes it. You can also delete the folders yourself. Benchpress never touches your own `~/.rustup` or `~/.cargo`.
 
-## Repository
+## Installing instead
 
-- `crates/core`: result schema, suite manifests, hashing and validation, shared by the CLI and server.
-- `crates/cli`: the `benchpress` binary.
-- `crates/server`: the website and API, one binary with one SQLite file.
-- `suites/`: suite manifests and `suites.lock`.
-- `deploy/`: systemd unit, Caddyfile and Litestream config. See [docs/deploy.md](docs/deploy.md).
+If you run Benchpress often, keep the binary:
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+```sh
+curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh -s -- install
+```
+
+This puts `benchpress` in `~/.local/bin`, or in `$BENCHPRESS_INSTALL_DIR` when set. Archives and checksums for a manual download are on the [releases page](https://github.com/matx64/benchpress/releases).
+
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setup, checks and running the site locally. Coding agents start at [AGENTS.md](AGENTS.md).
 
 ## License
 
