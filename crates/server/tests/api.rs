@@ -293,6 +293,15 @@ async fn submit_show_unpublish() {
         state.snap().rows.iter().all(|r| r.id != id),
         "unpublished result still in snapshot"
     );
+    let card = dir.path().join("t.og").join(format!("{id}.png"));
+    std::fs::create_dir_all(card.parent().unwrap()).unwrap();
+    std::fs::write(&card, b"stale").unwrap();
+    let (status, _) = send(Method::GET, format!("/r/{id}/og.png"), None, String::new()).await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "stale share card served for a deleted result"
+    );
     let logs = String::from_utf8(logs.0.lock().unwrap().clone()).unwrap();
     assert!(
         logs.contains("/api/v1/results"),

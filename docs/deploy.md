@@ -52,7 +52,7 @@ The submit rate limit (10 per hour per IPv4 address or IPv6 /64) reads the clien
 
 ## Deploys
 
-`.github/workflows/deploy.yml` runs after CI passes for a push to `main`. It compares `HEAD` with the commit recorded in `/var/lib/benchpress/deployed-sha` on the host, and deploys when anything under `crates/server`, `crates/core`, `suites/`, `install.sh` or `Cargo.lock` changed since then. It builds a musl binary, copies it over SSH, restarts the unit, checks `/healthz` and records the new commit. It needs:
+`.github/workflows/deploy.yml` runs after CI passes for a push to `main`. It compares `HEAD` with the commit recorded in `/var/lib/benchpress/deployed-sha` on the host, and deploys when anything under `crates/server`, `crates/core`, `suites/`, `install.sh` or `Cargo.lock` changed since then. It builds a musl binary, copies it over SSH, restarts the unit, checks `/healthz` and records the new commit. It skips commits that are already deployed or older than the deployed one. A manual run always deploys. It needs:
 
 - repository variables `DEPLOY_HOST` and `DEPLOY_USER`; the workflow skips itself while `DEPLOY_HOST` is unset,
 - secrets `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`,

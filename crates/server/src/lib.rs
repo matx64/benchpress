@@ -115,7 +115,7 @@ impl tower_governor::key_extractor::KeyExtractor for NetworkKey {
         &self,
         req: &axum::http::Request<T>,
     ) -> Result<Self::Key, tower_governor::GovernorError> {
-        Ok(match SmartIpKeyExtractor.extract(req)? {
+        Ok(match SmartIpKeyExtractor.extract(req)?.to_canonical() {
             std::net::IpAddr::V6(ip) => std::net::IpAddr::V6(std::net::Ipv6Addr::from(
                 ip.to_bits() & !((1u128 << 64) - 1),
             )),
@@ -237,6 +237,17 @@ pub async fn main_entry() -> Result<()> {
         Cmd::Serve => {
             let bind = config.bind;
             let state = AppState::new(config, pool).await?;
+            let refresher = Arc::clone(&state);
+            tokio::spawn(async move {
+                let mut tick = tokio::time::interval(std::time::Duration::from_secs(60));
+                tick.tick().await;
+                loop {
+                    tick.tick().await;
+                    if let Err(e) = refresher.refresh().await {
+                        tracing::error!(error = %e, "periodic snapshot refresh failed");
+                    }
+                }
+            });
             let listener = tokio::net::TcpListener::bind(bind).await?;
             tracing::info!(%bind, "listening");
             axum::serve(

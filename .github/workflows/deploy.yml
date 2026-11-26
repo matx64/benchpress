@@ -41,12 +41,22 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: |
           deployed=$(ssh "$USER@$HOST" 'cat /var/lib/benchpress/deployed-sha 2>/dev/null' || true)
-          if [ "$EVENT" = workflow_dispatch ] || [ -z "$deployed" ] || ! git cat-file -e "$deployed" 2>/dev/null \
-            || git diff --name-only "$deployed" HEAD | grep -qE '^(crates/(server|core)/|suites/|install.sh|Cargo.lock)'; then
-            echo server=true >> "$GITHUB_OUTPUT"
+          git fetch -q origin main
+          known() { [ -n "$deployed" ] && git cat-file -e "$deployed" 2>/dev/null; }
+          if [ "$EVENT" = workflow_dispatch ]; then
+            server=true
+          elif ! git merge-base --is-ancestor HEAD origin/main; then
+            server=false
+          elif ! known; then
+            server=true
+          elif git merge-base --is-ancestor HEAD "$deployed"; then
+            server=false
+          elif git diff --name-only "$deployed" HEAD | grep -qE '^(crates/(server|core)/|suites/|install.sh|Cargo.lock)'; then
+            server=true
           else
-            echo server=false >> "$GITHUB_OUTPUT"
+            server=false
           fi
+          echo "server=$server" >> "$GITHUB_OUTPUT"
       - if: steps.changes.outputs.server == 'true'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
       - if: steps.changes.outputs.server == 'true'
