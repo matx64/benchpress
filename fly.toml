@@ -1,5 +1,5 @@
 app = "benchpress-matx"
-primary_region = "gru"
+primary_region = "iad"
 kill_signal = "SIGTERM"
 kill_timeout = "10s"
 

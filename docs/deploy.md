@@ -8,7 +8,7 @@ You need [`flyctl`](https://fly.io/docs/flyctl/install/) and a Fly.io account. F
 
 ```sh
 fly apps create benchpress-matx
-fly volumes create benchpress_data --app benchpress-matx --region gru --size 1 --snapshot-retention 30 --yes
+fly volumes create benchpress_data --app benchpress-matx --region iad --size 1 --snapshot-retention 30 --yes
 fly secrets set --app benchpress-matx --stage BENCHPRESS_ADMIN_TOKEN="$(openssl rand -hex 32)"
 fly deploy
 fly certs add benchpress.matx.dev --app benchpress-matx
@@ -62,7 +62,7 @@ Fly snapshots the volume once a day and keeps each snapshot for 30 days. Unpubli
 ```sh
 fly volumes list --app benchpress-matx
 fly volumes snapshots list <volume-id>
-fly volumes create benchpress_data --app benchpress-matx --region gru --snapshot-id <snapshot-id>
+fly volumes create benchpress_data --app benchpress-matx --region iad --snapshot-id <snapshot-id>
 ```
 
 Then destroy the old machine's volume and run `fly deploy`, so the new machine mounts the restored one.
