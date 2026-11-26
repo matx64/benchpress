@@ -4,10 +4,9 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh                     open the menu
 #   curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh -s -- run quick     any benchpress command
-#   curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh -s -- install       install to ~/.local/bin instead
 #
-# Environment: BENCHPRESS_INSTALL_DIR (default ~/.local/bin), BENCHPRESS_VERSION (a release tag;
-# the copy attached to each release pins that release, otherwise latest),
+# Environment: BENCHPRESS_VERSION (a release tag; the copy attached to each release pins
+# that release, otherwise latest),
 # BENCHPRESS_DOWNLOAD_URL (a mirror holding the release assets; https:// or file://).
 
 set -eu
@@ -78,13 +77,6 @@ main() {
         base="https://github.com/$REPO/releases/download/$version"
     fi
     asset="benchpress-$target.tar.gz"
-    dir=${BENCHPRESS_INSTALL_DIR:-$HOME/.local/bin}
-    mode=run
-    if [ "${1:-}" = install ]; then
-        mode=install
-        shift
-        [ "$#" -eq 0 ] || fail "install takes no other arguments; run benchpress after installing"
-    fi
 
     tmp=$(mktemp -d 2>/dev/null || mktemp -d -t benchpress)
     trap 'rm -rf "$tmp"' EXIT
@@ -101,20 +93,6 @@ main() {
 
     tar -xzf "$tmp/$asset" -C "$tmp"
     chmod 755 "$tmp/benchpress"
-
-    if [ "$mode" = install ]; then
-        mkdir -p "$dir"
-        mv "$tmp/benchpress" "$dir/benchpress"
-        say "Installed benchpress to $dir/benchpress"
-        case ":$PATH:" in
-            *":$dir:"*) say "Run it with: benchpress" ;;
-            *)
-                say "$dir is not on your PATH. Add it with:"
-                say "  echo 'export PATH=\"$dir:\$PATH\"' >> ~/.profile"
-                ;;
-        esac
-        return 0
-    fi
 
     bin="$tmp/benchpress"
     if ! "$bin" --version >/dev/null 2>&1; then

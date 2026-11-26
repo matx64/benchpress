@@ -103,9 +103,6 @@ fn serve(name: &str, immutable: bool) -> Response {
         .into_response()
 }
 
-/// Release tag this server was built from.
-pub const RELEASE_TAG: &str = concat!("v", env!("CARGO_PKG_VERSION"));
-
 /// Where the launcher is fetched from. Switch to
 /// `https://github.com/matx64/benchpress/releases/latest/download/run.sh` after the first release.
 pub const RUN_URL: &str = "https://raw.githubusercontent.com/matx64/benchpress/main/run.sh";

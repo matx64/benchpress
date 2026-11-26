@@ -194,12 +194,12 @@ pub fn choose<T: std::fmt::Display>(
     }
 }
 
-/// Inside the menu, or launched by `run.sh` without an installed binary.
+/// Inside the menu.
 pub fn set_menu_mode(on: bool) {
     MENU_MODE.store(on, Ordering::Relaxed);
 }
 
-/// Point the user at a later action: a command when installed, the menu otherwise.
+/// Point the user at a later action: the menu when launched by `run.sh`, a command otherwise.
 pub fn later(command: &str, menu: &str) -> String {
     if MENU_MODE.load(Ordering::Relaxed) || crate::paths::ephemeral() {
         format!("from {menu}")

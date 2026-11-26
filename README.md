@@ -37,17 +37,16 @@ Each suite runs five scenarios three times: a clean debug build, a clean release
 
 ## Commands
 
-Every command works the same way through `run.sh` (`… | sh -s -- <command>`) and with an installed binary.
+The menu covers everything. To run one command without it, pass the command after `sh -s --`:
 
 ```
-benchpress                  open the menu
-benchpress run <suite>      run quick, standard or heavy
-benchpress list             list suites
-benchpress results          list local results; `results show <id>` for one
-benchpress submit <id>      review the payload, then publish it
-benchpress unpublish <id>   delete a published result
-benchpress doctor           check the toolchain, disk space and power state
-benchpress clean [--all]    delete cached toolchains, sources and builds (--all: results too)
+run <suite>        run quick, standard or heavy
+list               list suites
+results            list local results; `results show <id>` for one
+submit <id>        review the payload, then publish it
+unpublish <id>     delete a published result
+doctor             check the toolchain, disk space and power state
+clean [--all]      delete cached toolchains, sources and builds (--all: results too)
 ```
 
 ## Privacy
@@ -63,16 +62,6 @@ Results stay on your machine until you run `submit` or say yes to the prompt aft
 | Results and unpublish tokens | `~/.local/share/benchpress` | `~/Library/Application Support/benchpress` |
 
 `BENCHPRESS_CACHE_DIR` and `BENCHPRESS_DATA_DIR` move the first and last. "Manage local data" in the menu shows how much space each one uses and removes it. You can also delete the folders yourself. Benchpress never touches your own `~/.rustup` or `~/.cargo`.
-
-## Installing instead
-
-If you run Benchpress often, keep the binary:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/matx64/benchpress/main/run.sh | sh -s -- install
-```
-
-This puts `benchpress` in `~/.local/bin`, or in `$BENCHPRESS_INSTALL_DIR` when set. Archives and checksums for a manual download are on the [releases page](https://github.com/matx64/benchpress/releases).
 
 ## Contributing
 

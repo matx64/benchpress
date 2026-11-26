@@ -1185,25 +1185,12 @@ async fn start(State(state): State<Arc<AppState>>, jar: CookieJar, headers: Head
         jar: &jar,
         headers: &headers,
     };
-    let mut ctx = p.base(
+    let ctx = p.base(
         "Run it now",
         "Run benchpress on Linux or an Apple Silicon Mac without installing it.",
         "/start",
         "start",
     );
-    let base = format!(
-        "https://github.com/matx64/benchpress/releases/download/{}",
-        assets::RELEASE_TAG
-    );
-    ctx.insert(
-        "targets".into(),
-        [("Linux x86_64", "x86_64-unknown-linux-musl"), ("Linux arm64", "aarch64-unknown-linux-musl"), ("macOS Apple Silicon", "aarch64-apple-darwin")]
-            .iter()
-            .map(|(label, t)| json!({"label": label, "target": t, "url": format!("{base}/benchpress-{t}.tar.gz"), "sha": format!("{base}/benchpress-{t}.tar.gz.sha256")}))
-            .collect::<Vec<_>>()
-            .into(),
-    );
-    ctx.insert("sums".into(), format!("{base}/SHA256SUMS").into());
     p.render("start.html", &ctx)
 }
 

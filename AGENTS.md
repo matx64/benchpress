@@ -54,7 +54,7 @@ Server:
 - Aggregates and outlier marking: `Snapshot` and `mark_outliers` in `crates/server/src/stats.rs`.
 - Pages: `routes` in `crates/server/src/pages.rs`, templates in `crates/server/templates/`, shared template globals in `crates/server/src/views.rs`.
 - SVG charts: `crates/server/src/charts.rs`. Share images: `crates/server/src/og.rs`.
-- Static files, `RELEASE_TAG`, `RUN_URL` and `SCRIPT_SOURCE_URL`: `crates/server/src/assets.rs`, `crates/server/static/`. Release download links on the start page: `start` in `crates/server/src/pages.rs`.
+- Static files, `RUN_URL` and `SCRIPT_SOURCE_URL`: `crates/server/src/assets.rs`, `crates/server/static/`.
 - Fake data for local work: `crates/server/src/seed.rs`.
 
 Tests: unit tables sit next to the code they cover, plus `crates/cli/tests/pipeline.rs` and `crates/server/tests/api.rs`.
@@ -67,5 +67,5 @@ Tests: unit tables sit next to the code they cover, plus `crates/cli/tests/pipel
 - Never rename a `Rejection` code. Clients depend on them.
 - A published result must not gain fields that identify a person or machine: username, hostname, serial number, IP address or file path.
 - Keep the test suite small. Add a row to an existing table test before you write a new test, and test contracts only.
-- Running without installing is the default way to use Benchpress. Docs and the website lead with the `run.sh` command and mention `install` second.
+- Benchpress runs only through `run.sh`, with nothing installed. Do not add an install path, a manual download or a self-update.
 - Update the docs that describe a change in the same commit: [README.md](README.md) for users, [docs/methodology.md](docs/methodology.md) for measurement, validation and comparison, [docs/deploy.md](docs/deploy.md) for the server and releases. The website's about and start pages (`crates/server/templates/about.html`, `start.html`) repeat parts of the methodology and README, so keep them in step.

@@ -39,7 +39,7 @@ jobs:
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -p benchpress --locked
-      - name: Run and install from a local mirror
+      - name: Run from a local mirror
         run: |
           target="$(uname -m)-unknown-linux-musl"
           mirror="$RUNNER_TEMP/mirror"
@@ -50,8 +50,6 @@ jobs:
           export BENCHPRESS_DOWNLOAD_URL="file://$mirror"
           sh run.sh --version
           test -z "$(ls -A "$TMPDIR")"
-          BENCHPRESS_INSTALL_DIR="$RUNNER_TEMP/bin" sh run.sh install
-          test -x "$RUNNER_TEMP/bin/benchpress"
           echo "0000 benchpress-$target.tar.gz" > "$mirror/benchpress-$target.tar.gz.sha256"
           if sh run.sh --version; then
             echo "launcher accepted a bad checksum" >&2
