@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
@@ -6,6 +6,23 @@ use benchpress_server::{AppState, Config, app, db, seed};
 use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
+
+const CLIENT_IP: &str = "203.0.113.77";
+
+#[derive(Clone, Default)]
+struct Logs(Arc<Mutex<Vec<u8>>>);
+
+impl std::io::Write for Logs {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if let Ok(mut logs) = self.0.lock() {
+            logs.extend_from_slice(buf);
+        }
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
 
 struct Step {
     name: &'static str,
@@ -19,6 +36,15 @@ struct Step {
 
 #[tokio::test]
 async fn submit_show_unpublish() {
+    let logs = Logs::default();
+    let sink = logs.clone();
+    let _guard = tracing::subscriber::set_default(
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::TRACE)
+            .with_ansi(false)
+            .with_writer(move || sink.clone())
+            .finish(),
+    );
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("t.db").to_string_lossy().into_owned();
     let config = Config {
@@ -48,7 +74,9 @@ async fn submit_show_unpublish() {
             let mut req = Request::builder()
                 .method(method)
                 .uri(path)
-                .header("content-type", "application/json");
+                .header("content-type", "application/json")
+                .header("x-forwarded-for", CLIENT_IP)
+                .header("x-real-ip", CLIENT_IP);
             if let Some(t) = token {
                 req = req.header("authorization", format!("Bearer {t}"));
             }
@@ -207,4 +235,10 @@ async fn submit_show_unpublish() {
         state.snap().rows.iter().all(|r| r.id != id),
         "unpublished result still in snapshot"
     );
+    let logs = String::from_utf8(logs.0.lock().unwrap().clone()).unwrap();
+    assert!(
+        logs.contains("/api/v1/results"),
+        "request logging is not captured"
+    );
+    assert!(!logs.contains(CLIENT_IP), "client IP leaked into logs");
 }

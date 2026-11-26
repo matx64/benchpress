@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    if: vars.DEPLOY_HOST != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.diff.outputs.server }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = workflow_dispatch ] || git diff --name-only HEAD~1 HEAD | grep -qE '^(crates/(server|core)/|suites/|install.sh|Cargo.lock)'; then
+            echo server=true >> "$GITHUB_OUTPUT"
+          else
+            echo server=false >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
+    runs-on: ubuntu-24.04
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p benchpress-server --release --locked --target x86_64-unknown-linux-musl
+      - name: Upload and restart
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          scp target/x86_64-unknown-linux-musl/release/benchpress-server "$USER@$HOST:/tmp/benchpress-server"
+          ssh "$USER@$HOST" 'sudo install -m 755 /tmp/benchpress-server /usr/local/bin/benchpress-server && sudo systemctl restart benchpress-server'
+          ssh "$USER@$HOST" 'for _ in $(seq 20); do curl -fsS http://127.0.0.1:8080/healthz && exit 0; sleep 2; done; exit 1'

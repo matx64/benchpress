@@ -5,7 +5,8 @@
 #   curl -fsSL https://benchpress.dev/install.sh | sh
 #   curl -fsSL https://benchpress.dev/install.sh | sh -s -- run
 #
-# Environment: BENCHPRESS_INSTALL_DIR (default ~/.local/bin), BENCHPRESS_VERSION (default latest).
+# Environment: BENCHPRESS_INSTALL_DIR (default ~/.local/bin), BENCHPRESS_VERSION (default latest),
+# BENCHPRESS_DOWNLOAD_URL (a mirror holding the release assets; https:// or file://).
 
 set -eu
 
@@ -53,7 +54,7 @@ sha256_of() {
 }
 
 download() {
-    curl --proto '=https' --tlsv1.2 -fsSL "$1" -o "$2" || fail "download failed: $1"
+    curl --proto "$protocols" --tlsv1.2 -fsSL "$1" -o "$2" || fail "download failed: $1"
 }
 
 main() {
@@ -62,7 +63,11 @@ main() {
     need uname
     target=$(detect_target)
     version=${BENCHPRESS_VERSION:-latest}
-    if [ "$version" = latest ]; then
+    protocols='=https'
+    if [ -n "${BENCHPRESS_DOWNLOAD_URL:-}" ]; then
+        base=${BENCHPRESS_DOWNLOAD_URL%/}
+        protocols='=https,file'
+    elif [ "$version" = latest ]; then
         base="https://github.com/$REPO/releases/latest/download"
     else
         base="https://github.com/$REPO/releases/download/$version"

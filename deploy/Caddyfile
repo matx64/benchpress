@@ -1,0 +1,9 @@
+# TODO(decision): final domain.
+benchpress.dev {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8080
+}
+
+www.benchpress.dev {
+	redir https://benchpress.dev{uri} permanent
+}
