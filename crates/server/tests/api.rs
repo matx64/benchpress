@@ -80,8 +80,7 @@ async fn submit_show_unpublish() {
                 .method(method)
                 .uri(path)
                 .header("content-type", "application/json")
-                .header("x-forwarded-for", CLIENT_IP)
-                .header("x-real-ip", CLIENT_IP);
+                .header("fly-client-ip", CLIENT_IP);
             if let Some(t) = token {
                 req = req.header("authorization", format!("Bearer {t}"));
             }

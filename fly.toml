@@ -1,0 +1,30 @@
+app = "benchpress"
+primary_region = "gru"
+kill_signal = "SIGTERM"
+kill_timeout = "10s"
+
+[env]
+BENCHPRESS_PUBLIC_URL = "https://benchpress.matx.dev"
+
+[mounts]
+source = "benchpress_data"
+destination = "/data"
+snapshot_retention = 30
+
+[http_service]
+internal_port = 8080
+force_https = true
+auto_stop_machines = "stop"
+auto_start_machines = true
+min_machines_running = 0
+
+[[http_service.checks]]
+interval = "30s"
+timeout = "5s"
+grace_period = "10s"
+method = "GET"
+path = "/healthz"
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "256mb"

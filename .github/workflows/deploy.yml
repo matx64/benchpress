@@ -13,28 +13,11 @@ concurrency:
 
 jobs:
   deploy:
-    if: vars.DEPLOY_HOST != ''
     runs-on: ubuntu-24.04
     environment: production
-    env:
-      HOST: ${{ vars.DEPLOY_HOST }}
-      USER: ${{ vars.DEPLOY_USER }}
     steps:
       - uses: actions/checkout@v4
-      - name: Configure SSH
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
         env:
-          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-      - run: sudo apt-get update && sudo apt-get install -y musl-tools
-      - run: rustup toolchain install && rustup target add x86_64-unknown-linux-musl
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo build -p benchpress-server --release --locked --target x86_64-unknown-linux-musl
-      - name: Upload and restart
-        run: |
-          scp target/x86_64-unknown-linux-musl/release/benchpress-server "$USER@$HOST:/tmp/benchpress-server"
-          ssh "$USER@$HOST" 'sudo install -m 755 /tmp/benchpress-server /usr/local/bin/benchpress-server && sudo systemctl restart benchpress-server'
-          ssh "$USER@$HOST" 'for _ in $(seq 20); do curl -fsS http://127.0.0.1:8080/healthz && exit 0; sleep 2; done; exit 1'
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

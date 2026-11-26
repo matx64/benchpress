@@ -1,41 +1,22 @@
 # Deploying the server
 
-The server is one static binary and one SQLite file. Production runs on a small VPS with Caddy for TLS and Litestream for continuous backups.
-
-<!-- TODO(decision): hosting provider. The defaults below assume a Debian or Ubuntu VPS. -->
+The server is one static binary and one SQLite file. Production runs on one Fly.io machine with a volume, at benchpress.matx.dev.
 
 ## One-time setup
 
-On a fresh Debian or Ubuntu host:
+You need [`flyctl`](https://fly.io/docs/flyctl/install/) and a Fly.io account. From the repository root:
 
 ```sh
-sudo apt install caddy
-curl -fsSL -o litestream.deb https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.deb
-sudo dpkg -i litestream.deb
-sudo useradd --system --home /var/lib/benchpress --shell /usr/sbin/nologin benchpress
-sudo install -d -o benchpress -g benchpress /var/lib/benchpress
-sudo install -d /etc/benchpress
+fly apps create benchpress
+fly volumes create benchpress_data --app benchpress --region gru --size 1 --snapshot-retention 30 --yes
+fly secrets set --app benchpress --stage BENCHPRESS_ADMIN_TOKEN="$(openssl rand -hex 32)"
+fly deploy
+fly certs add benchpress.matx.dev --app benchpress
 ```
 
-Copy the files from `deploy/`:
+`fly certs add` prints the DNS records to create. In Cloudflare, add a `CNAME` from `benchpress` to `benchpress.fly.dev` with the proxy turned off, so Fly can issue the certificate.
 
-| File | Destination |
-| --- | --- |
-| `benchpress-server.service` | `/etc/systemd/system/benchpress-server.service` |
-| `litestream.yml` | `/etc/benchpress/litestream.yml` |
-| `env.example` | `/etc/benchpress/env`, filled in and `chmod 600` |
-| `Caddyfile` | `/etc/caddy/Caddyfile` |
-
-Build the binary with `cargo build -p benchpress-server --release --target x86_64-unknown-linux-musl`, copy it to `/usr/local/bin/benchpress-server`, then:
-
-```sh
-sudo systemctl daemon-reload
-sudo systemctl enable --now benchpress-server
-sudo systemctl reload caddy
-curl -fsS http://127.0.0.1:8080/healthz
-```
-
-The unit runs the server under `litestream replicate -exec`, so replication starts before the server and stops after it. The server creates the database and applies migrations on start.
+The machine stops when no requests arrive and starts on the next one, so the first request after a quiet period takes a second or two. It keeps one SQLite file on the `benchpress_data` volume, so the app runs on exactly one machine. Never scale it out. The server creates the database and applies migrations on start.
 
 ## Configuration
 
@@ -43,12 +24,12 @@ The unit runs the server under `litestream replicate -exec`, so replication star
 | --- | --- | --- |
 | `BENCHPRESS_DB` | `benchpress.db` | SQLite file. OG cards are cached next to it in `<name>.og/`. |
 | `BENCHPRESS_BIND` | `0.0.0.0:8080` | Listen address. |
-| `BENCHPRESS_PUBLIC_URL` | `http://localhost:8080` | Base for share links and OG tags. |
-| `BENCHPRESS_ADMIN_TOKEN` | unset | Lets an operator unpublish any result with `DELETE /api/v1/results/<id>`. |
+| `BENCHPRESS_PUBLIC_URL` | `http://localhost:8080` | Base for share links and OG tags. Set in `fly.toml`. |
+| `BENCHPRESS_ADMIN_TOKEN` | unset | A Fly secret. Lets an operator unpublish any result with `DELETE /api/v1/results/<id>`. |
 | `BENCHPRESS_LOG_FORMAT` | text | `json` for structured logs. |
 | `BENCHPRESS_LOG` | `info` | Log filter, in `RUST_LOG` syntax. |
 
-The submit rate limit (a burst of 10, then one every six minutes, per IPv4 address or IPv6 /64) reads the client IP from `X-Forwarded-For`. Caddy 2.5 and later replace any `X-Forwarded-For` a client sends unless you configure `trusted_proxies`, so clients cannot spoof it. Do not expose port 8080 directly. `BENCHPRESS_ADMIN_TOKEN` must be at least 32 characters or the server refuses to start; generate one with `openssl rand -hex 32`.
+`Dockerfile` sets `BENCHPRESS_DB`, `BENCHPRESS_BIND` and `BENCHPRESS_LOG_FORMAT` for the container. The submit rate limit (a burst of 10, then one every six minutes, per IPv4 address or IPv6 /64) keys on the `Fly-Client-IP` header that Fly's proxy sets, and on the peer address when the header is missing. Outside Fly, put the server behind a proxy that sets or strips that header, or clients can spoof it. The limiter lives in memory, so it resets each time the machine stops. `BENCHPRESS_ADMIN_TOKEN` must be at least 32 characters or the server refuses to start.
 
 ## Releases and deploys
 
@@ -64,11 +45,7 @@ Workflows run only when you publish a GitHub release, so pushes to `main` cost n
 
 Every release that is not a pre-release ends up as latest, even if you unticked "Set as the latest release". Releases run one at a time. If the tag check or CI fails, the release stays a pre-release without archives. Fix the problem, delete the release and its tag, and publish again.
 
-Deploy builds a musl server binary from the release tag, copies it over SSH, restarts the unit and checks `/healthz`. You can also start it by hand from the Actions tab. It needs:
-
-- repository variables `DEPLOY_HOST` and `DEPLOY_USER` (deploy skips itself while `DEPLOY_HOST` is unset);
-- secrets `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`;
-- passwordless `sudo` on the host for `install` and `systemctl restart benchpress-server`.
+Deploy runs `fly deploy --remote-only`, which builds `Dockerfile` on Fly's builders and rolls the machine. You can also start it by hand from the Actions tab, or run `fly deploy` locally. It needs the repository secret `FLY_API_TOKEN`, created with `fly tokens create deploy --app benchpress`.
 
 ### After the first release
 
@@ -80,17 +57,20 @@ Until a release exists, the run command fetches `run.sh` from `main`, and that s
 
 ## Backups
 
-Litestream streams every WAL change to S3-compatible storage and keeps 30 days. Unpublishing deletes a row, so a deleted result leaves the backups 30 days later. The privacy section of the about page says so. Test a restore before launch and after any Litestream upgrade:
+Fly snapshots the volume once a day and keeps each snapshot for 30 days. Unpublishing deletes a row, so a deleted result leaves the backups 30 days later. The privacy section of the about page says so. To restore, list the snapshots and create a new volume from one:
 
 ```sh
-litestream restore -config /etc/benchpress/litestream.yml -o /tmp/restore.db /var/lib/benchpress/benchpress.db
-sqlite3 /tmp/restore.db 'select count(*) from results'
+fly volumes list --app benchpress
+fly volumes snapshots list <volume-id>
+fly volumes create benchpress_data --app benchpress --region gru --snapshot-id <snapshot-id>
 ```
+
+Then destroy the old machine's volume and run `fly deploy`, so the new machine mounts the restored one.
 
 ## Monitoring
 
-Point an uptime checker at `https://benchpress.matx.dev/healthz`. With `BENCHPRESS_LOG_FORMAT=json`, alert on log lines with `"level":"ERROR"`. The server logs every 500 response at that level.
+`fly logs --app benchpress` streams the JSON logs. Alert on lines with `"level":"ERROR"`. The server logs every 500 response at that level. An uptime checker on `https://benchpress.matx.dev/healthz` would keep the machine awake around the clock, so check it no more than every few hours, or not at all.
 
 ## Never
 
-Do not run `benchpress-server seed` against production. Seed rows exist for local design work and switch on a banner across the site.
+Do not run `benchpress-server seed` against production or scale the app past one machine. Seed rows exist for local design work and switch on a banner across the site.

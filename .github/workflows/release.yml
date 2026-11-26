@@ -102,6 +102,5 @@ jobs:
 
   deploy:
     needs: upload
-    if: vars.DEPLOY_HOST != ''
     uses: ./.github/workflows/deploy.yml
     secrets: inherit

@@ -23,7 +23,6 @@ use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 use tower_governor::GovernorLayer;
 use tower_governor::governor::GovernorConfigBuilder;
-use tower_governor::key_extractor::SmartIpKeyExtractor;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 
@@ -105,7 +104,7 @@ impl AppState {
     }
 }
 
-/// Rate-limit key: the client IP, widened to its /64 for IPv6 since one host usually owns the whole prefix.
+/// Rate-limit key: the client IP from Fly's `Fly-Client-IP`, else the peer address, widened to its /64 for IPv6 since one host usually owns the whole prefix.
 #[derive(Clone, Copy)]
 struct NetworkKey;
 
@@ -116,7 +115,18 @@ impl tower_governor::key_extractor::KeyExtractor for NetworkKey {
         &self,
         req: &axum::http::Request<T>,
     ) -> Result<Self::Key, tower_governor::GovernorError> {
-        Ok(match SmartIpKeyExtractor.extract(req)?.to_canonical() {
+        let ip = req
+            .headers()
+            .get("fly-client-ip")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.trim().parse::<std::net::IpAddr>().ok())
+            .or_else(|| {
+                req.extensions()
+                    .get::<axum::extract::ConnectInfo<SocketAddr>>()
+                    .map(|c| c.0.ip())
+            })
+            .ok_or(tower_governor::GovernorError::UnableToExtractKey)?;
+        Ok(match ip.to_canonical() {
             std::net::IpAddr::V6(ip) => std::net::IpAddr::V6(std::net::Ipv6Addr::from(
                 ip.to_bits() & !((1u128 << 64) - 1),
             )),

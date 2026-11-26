@@ -24,7 +24,7 @@ Also run `shellcheck run.sh` when you change `run.sh`. [CONTRIBUTING.md](CONTRIB
 | `xtask` | `cargo xtask suites-lock` |
 | `suites/` | Suite manifests `<id>@<version>.toml` and `suites.lock` |
 | `run.sh` | Launcher that the curl command fetches |
-| `deploy/`, `.github/workflows/` | Server deployment, release pipeline |
+| `Dockerfile`, `fly.toml`, `.github/workflows/` | Server deployment on Fly.io, release pipeline |
 
 ## Where things live
 
