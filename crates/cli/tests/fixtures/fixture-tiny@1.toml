@@ -1,0 +1,48 @@
+schema_version = 1
+id = "fixture-tiny"
+version = 1
+tier = "quick"
+display_name = "Fixture"
+description = "A three-crate fixture workspace used by the integration test"
+
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+
+[source]
+repo = "https://github.com/matx64/benchpress"
+commit = "0000000000000000000000000000000000000000"
+archive_sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
+subdir = ""
+
+[build]
+package = "tiny-app"
+
+[[scenario]]
+id = "clean-debug"
+kind = "clean"
+args = ["build", "--locked", "--offline"]
+
+[[scenario]]
+id = "incremental-leaf"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "app/src/main.rs"
+
+[[scenario]]
+id = "incremental-core"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "util/src/lib.rs"
+
+[[scenario]]
+id = "clean-release"
+kind = "clean"
+args = ["build", "--release", "--locked", "--offline"]
+
+[runs]
+count = 2
+
+[requirements]
+disk_gb = 1
+estimated_minutes = { min = 1, max = 2 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BusProtocol</key>
+	<string>Apple Fabric</string>
+	<key>DeviceIdentifier</key>
+	<string>disk3s5</string>
+	<key>DiskUUID</key>
+	<string>00000000-0000-0000-0000-000000000000</string>
+	<key>FilesystemType</key>
+	<string>apfs</string>
+	<key>MediaName</key>
+	<string>APPLE SSD AP0512Z</string>
+	<key>SolidState</key>
+	<true/>
+</dict>
+</plist>

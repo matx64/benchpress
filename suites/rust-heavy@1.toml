@@ -1,0 +1,61 @@
+schema_version = 1
+id = "rust-heavy"
+version = 1
+tier = "heavy"
+display_name = "Heavy"
+description = "Nushell 0.117.0, a large shell workspace with about 550 crates"
+
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+
+[source]
+repo = "https://github.com/nushell/nushell"
+commit = "a4819256a2d875ca42c8600242388da291f3beaa"
+archive_sha256 = "6d79ea2058fc17c2ba511640f43db2431ee325552c967ba595a8ec369afac8fe"
+subdir = ""
+
+[build]
+package = "nu"
+features = []
+no_default_features = false
+
+[[scenario]]
+id = "clean-debug"
+kind = "clean"
+args = ["build", "--locked", "--offline"]
+min_wall_ms = 20000
+
+[[scenario]]
+id = "incremental-leaf"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "src/main.rs"
+min_wall_ms = 300
+
+[[scenario]]
+id = "incremental-core"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "crates/nu-command/src/lib.rs"
+min_wall_ms = 1000
+
+[[scenario]]
+id = "clean-release"
+kind = "clean"
+args = ["build", "--release", "--locked", "--offline"]
+min_wall_ms = 40000
+
+[[scenario]]
+id = "check"
+kind = "clean"
+args = ["check", "--locked", "--offline"]
+min_wall_ms = 10000
+
+[runs]
+count = 3
+warmup = false
+
+[requirements]
+disk_gb = 14
+estimated_minutes = { min = 20, max = 90 }

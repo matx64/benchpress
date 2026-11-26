@@ -1,0 +1,17 @@
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 186
+model name	: 13th Gen Intel(R) Core(TM) i7-1360P
+stepping	: 2
+cpu MHz		: 1200.000
+cache size	: 18432 KB
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov
+bogomips	: 5222.40
+
+processor	: 1
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 186
+model name	: 13th Gen Intel(R) Core(TM) i7-1360P
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov

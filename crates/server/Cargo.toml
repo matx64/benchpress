@@ -1,0 +1,39 @@
+[package]
+name = "benchpress-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = "1.0.105"
+axum = "0.8.9"
+axum-extra = { version = "0.12.6", features = ["cookie", "query"] }
+benchpress-core = { version = "0.1.0", path = "../core" }
+hex = "0.4.3"
+minijinja = { version = "3.1.0", features = ["json", "urlencode"] }
+minijinja-embed = "3.1.0"
+rand = "0.10.4"
+resvg = "0.50.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.2"
+sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
+time = { version = "0.3.55", features = ["formatting", "parsing"] }
+tokio = { version = "1.54.1", features = ["full"] }
+tower = "0.5.3"
+tower-http = { version = "0.7.1", features = ["compression-full", "trace", "limit"] }
+tower_governor = "0.8.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
+
+[build-dependencies]
+minijinja-embed = "3.1.0"
+
+[dev-dependencies]
+http-body-util = "0.1.5"
+tower = "0.5.3"

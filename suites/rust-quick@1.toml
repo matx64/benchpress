@@ -1,0 +1,61 @@
+schema_version = 1
+id = "rust-quick"
+version = 1
+tier = "quick"
+display_name = "Quick"
+description = "ripgrep 16.0.0, a small command-line search tool with about 60 crates"
+
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+
+[source]
+repo = "https://github.com/BurntSushi/ripgrep"
+commit = "669cb4c755db20b26c3af3d923c042ae224c7496"
+archive_sha256 = "21002cba547651acf2ffb2f1e90010ee9533df3ce8819b171378d55a4f5953fd"
+subdir = ""
+
+[build]
+package = "ripgrep"
+features = []
+no_default_features = false
+
+[[scenario]]
+id = "clean-debug"
+kind = "clean"
+args = ["build", "--locked", "--offline"]
+min_wall_ms = 1000
+
+[[scenario]]
+id = "incremental-leaf"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "crates/core/main.rs"
+min_wall_ms = 100
+
+[[scenario]]
+id = "incremental-core"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "crates/searcher/src/lib.rs"
+min_wall_ms = 100
+
+[[scenario]]
+id = "clean-release"
+kind = "clean"
+args = ["build", "--release", "--locked", "--offline"]
+min_wall_ms = 2000
+
+[[scenario]]
+id = "check"
+kind = "clean"
+args = ["check", "--locked", "--offline"]
+min_wall_ms = 500
+
+[runs]
+count = 3
+warmup = true
+
+[requirements]
+disk_gb = 2
+estimated_minutes = { min = 1, max = 4 }

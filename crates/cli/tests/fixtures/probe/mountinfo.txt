@@ -1,0 +1,4 @@
+26 1 259:2 / / rw,relatime shared:1 - ext4 /dev/nvme0n1p2 rw
+27 26 0:25 / /tmp rw,nosuid,nodev shared:5 - tmpfs tmpfs rw,size=16G
+28 26 259:3 / /home rw,relatime shared:6 - btrfs /dev/nvme0n1p3 rw,space_cache=v2
+29 26 0:26 / /proc rw,nosuid,nodev,noexec,relatime shared:12 - proc proc rw

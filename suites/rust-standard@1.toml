@@ -1,0 +1,61 @@
+schema_version = 1
+id = "rust-standard"
+version = 1
+tier = "standard"
+display_name = "Standard"
+description = "rust-analyzer 2026-11-16, a mid-size language server with about 370 crates"
+
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+
+[source]
+repo = "https://github.com/rust-lang/rust-analyzer"
+commit = "946b80a756ac1a1ef8882ec65e4f3199e38a23c7"
+archive_sha256 = "3b4fdce08a408b9db20806d5bdaf56ac8db9239b98e8de8e00433e153d2393b7"
+subdir = ""
+
+[build]
+package = "rust-analyzer"
+features = []
+no_default_features = false
+
+[[scenario]]
+id = "clean-debug"
+kind = "clean"
+args = ["build", "--locked", "--offline"]
+min_wall_ms = 10000
+
+[[scenario]]
+id = "incremental-leaf"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "crates/rust-analyzer/src/bin/main.rs"
+min_wall_ms = 300
+
+[[scenario]]
+id = "incremental-core"
+kind = "incremental"
+args = ["build", "--locked", "--offline"]
+touch = "crates/ide/src/lib.rs"
+min_wall_ms = 500
+
+[[scenario]]
+id = "clean-release"
+kind = "clean"
+args = ["build", "--release", "--locked", "--offline"]
+min_wall_ms = 20000
+
+[[scenario]]
+id = "check"
+kind = "clean"
+args = ["check", "--locked", "--offline"]
+min_wall_ms = 5000
+
+[runs]
+count = 3
+warmup = false
+
+[requirements]
+disk_gb = 8
+estimated_minutes = { min = 8, max = 30 }
