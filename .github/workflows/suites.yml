@@ -20,4 +20,6 @@ jobs:
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -p benchpress --release --locked
-      - run: ./target/release/benchpress run "${{ inputs.suite }}" --runs 1 --cooldown 0 --no-submit --yes
+      - env:
+          SUITE: ${{ inputs.suite }}
+        run: ./target/release/benchpress run "$SUITE" --runs 1 --cooldown 0 --no-submit --yes

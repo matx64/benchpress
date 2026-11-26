@@ -736,12 +736,12 @@ async fn result(
 }
 
 async fn og_image(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
-    if let Some(png) = state.og_cache.get(&id) {
-        return png_response(png);
-    }
     let Ok(Some(stored)) = db::get(&state.pool, &id).await else {
         return StatusCode::NOT_FOUND.into_response();
     };
+    if let Some(png) = state.og_cache.get(&id) {
+        return png_response(png);
+    }
     let snap = state.snap();
     let st = state.clone();
     let rendered =
@@ -749,7 +749,12 @@ async fn og_image(State(state): State<Arc<AppState>>, Path(id): Path<String>) ->
     match rendered {
         Ok(Ok(png)) => {
             let png = state.og_cache.put(&id, png);
-            png_response(png)
+            if matches!(db::get(&state.pool, &id).await, Ok(Some(_))) {
+                png_response(png)
+            } else {
+                state.og_cache.forget(&id);
+                StatusCode::NOT_FOUND.into_response()
+            }
         }
         Ok(Err(e)) => {
             tracing::error!(error = %e, "og render failed");
@@ -1203,7 +1208,12 @@ async fn install(
 async fn theme(jar: CookieJar, Query(q): Q) -> (CookieJar, Redirect) {
     let back = q
         .get("back")
-        .filter(|b| b.starts_with('/') && !b.starts_with("//"))
+        .filter(|b| {
+            b.starts_with('/')
+                && !b.starts_with("//")
+                && !b.contains('\\')
+                && !b.chars().any(char::is_control)
+        })
         .cloned()
         .unwrap_or_else(|| "/".into());
     let jar = match q.get("set").map(String::as_str) {

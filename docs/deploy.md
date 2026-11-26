@@ -48,19 +48,19 @@ The unit runs the server under `litestream replicate -exec`, so replication star
 | `BENCHPRESS_LOG_FORMAT` | text | `json` for structured logs. |
 | `BENCHPRESS_LOG` | `info` | Log filter, in `RUST_LOG` syntax. |
 
-Caddy must pass `X-Forwarded-For`, which it does by default. The submit rate limit (10 per hour per client) reads it.
+The submit rate limit (10 per hour per IPv4 address or IPv6 /64) reads the client IP from `X-Forwarded-For`. Caddy 2.5 and later replace any `X-Forwarded-For` a client sends unless you configure `trusted_proxies`, so clients cannot spoof it. Do not expose port 8080 directly. `BENCHPRESS_ADMIN_TOKEN` must be at least 32 characters or the server refuses to start; generate one with `openssl rand -hex 32`.
 
 ## Deploys
 
-`.github/workflows/deploy.yml` runs after CI passes on `main` when a commit touches `crates/server`, `crates/core`, `suites/`, `install.sh` or `Cargo.lock`. It builds a musl binary, copies it over SSH, restarts the unit and checks `/healthz`. It needs:
+`.github/workflows/deploy.yml` runs after CI passes for a push to `main`. It compares `HEAD` with the commit recorded in `/var/lib/benchpress/deployed-sha` on the host, and deploys when anything under `crates/server`, `crates/core`, `suites/`, `install.sh` or `Cargo.lock` changed since then. It builds a musl binary, copies it over SSH, restarts the unit, checks `/healthz` and records the new commit. It needs:
 
 - repository variables `DEPLOY_HOST` and `DEPLOY_USER`; the workflow skips itself while `DEPLOY_HOST` is unset,
 - secrets `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS`,
-- passwordless `sudo` on the host for `install` and `systemctl restart benchpress-server`.
+- passwordless `sudo` on the host for `install`, `tee /var/lib/benchpress/deployed-sha` and `systemctl restart benchpress-server`.
 
 ## Backups
 
-Litestream streams every WAL change to S3-compatible storage and keeps 30 days. Test a restore before launch and after any Litestream upgrade:
+Litestream streams every WAL change to S3-compatible storage and keeps 30 days. Unpublishing deletes a row, so a deleted result disappears from backups once its 30 days pass; the privacy section of the about page says so. Test a restore before launch and after any Litestream upgrade:
 
 ```sh
 litestream restore -config /etc/benchpress/litestream.yml -o /tmp/restore.db /var/lib/benchpress/benchpress.db

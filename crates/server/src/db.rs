@@ -32,6 +32,8 @@ pub enum Inserted {
     Ok,
     /// Same fingerprint already stored.
     Duplicate,
+    /// The generated public id already exists; retry with a new one.
+    IdTaken,
 }
 
 /// Store a validated result.
@@ -92,7 +94,13 @@ pub async fn insert(
     .execute(&mut *tx)
     .await;
     match res {
-        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => return Ok(Inserted::Duplicate),
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
+            return Ok(if e.message().contains("results.id") {
+                Inserted::IdTaken
+            } else {
+                Inserted::Duplicate
+            });
+        }
         Err(e) => return Err(e.into()),
         Ok(_) => {}
     }
@@ -156,9 +164,9 @@ pub async fn delete_token_sha(pool: &SqlitePool, id: &str) -> Result<Option<Stri
     )
 }
 
-/// Hide a result from every page and endpoint.
-pub async fn hide(pool: &SqlitePool, id: &str) -> Result<bool> {
-    let r = sqlx::query("UPDATE results SET hidden = 1 WHERE id = ? AND hidden = 0")
+/// Delete a result and its scenario rows.
+pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool> {
+    let r = sqlx::query("DELETE FROM results WHERE id = ?")
         .bind(id)
         .execute(pool)
         .await?;

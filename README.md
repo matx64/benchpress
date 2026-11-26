@@ -32,7 +32,7 @@ benchpress run <suite>      run quick, standard or heavy
 benchpress list             list suites
 benchpress results          list local results; `results show <id>` for one
 benchpress submit <id>      review the payload, then publish it
-benchpress unpublish <id>   remove a published result
+benchpress unpublish <id>   delete a published result
 benchpress doctor           check the toolchain, disk space and power state
 benchpress clean            delete cached sources and toolchains
 ```

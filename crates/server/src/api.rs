@@ -84,30 +84,33 @@ pub async fn create(State(state): State<Arc<AppState>>, body: Bytes) -> Response
         Err(e) => return internal(&e.into()),
     };
     let token = hex::encode(rand::random::<[u8; 32]>());
-    let id = public_id();
-    match db::insert(
-        &state.pool,
-        &id,
-        &fingerprint,
-        &sha_hex(&token),
-        &now(),
-        &result,
-        &flags,
-    )
-    .await
-    {
-        Ok(Inserted::Ok) => {}
-        Ok(Inserted::Duplicate) => {
-            return reject(
-                StatusCode::CONFLICT,
-                "duplicate",
-                "this exact result was already submitted",
-            );
+    let mut id = public_id();
+    loop {
+        match db::insert(
+            &state.pool,
+            &id,
+            &fingerprint,
+            &sha_hex(&token),
+            &now(),
+            &result,
+            &flags,
+        )
+        .await
+        {
+            Ok(Inserted::Ok) => break,
+            Ok(Inserted::IdTaken) => id = public_id(),
+            Ok(Inserted::Duplicate) => {
+                return reject(
+                    StatusCode::CONFLICT,
+                    "duplicate",
+                    "this exact result was already submitted",
+                );
+            }
+            Err(e) => return internal(&e),
         }
-        Err(e) => return internal(&e),
     }
     if let Err(e) = state.refresh().await {
-        return internal(&e);
+        tracing::error!(error = %e, "snapshot refresh failed after insert");
     }
     let url = format!("{}/r/{id}", state.config.public_url);
     tracing::info!(id, suite = %result.suite.id, "result stored");
@@ -116,6 +119,18 @@ pub async fn create(State(state): State<Arc<AppState>>, body: Bytes) -> Response
         Json(json!({ "id": id, "url": url, "delete_token": token })),
     )
         .into_response()
+}
+
+/// Replace axum's plain-text 413 with the API's JSON rejection.
+pub async fn json_too_large(res: Response) -> Response {
+    if res.status() == StatusCode::PAYLOAD_TOO_LARGE {
+        return reject(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "payload_too_large",
+            "the result document is too large",
+        );
+    }
+    res
 }
 
 /// `GET /api/v1/results/{id}`.
@@ -164,13 +179,12 @@ pub async fn delete(
             "that token cannot delete this result",
         );
     }
-    match db::hide(&state.pool, &id).await {
-        Ok(_) => {}
-        Err(e) => return internal(&e),
+    if let Err(e) = db::delete(&state.pool, &id).await {
+        return internal(&e);
     }
     state.og_cache.forget(&id);
     if let Err(e) = state.refresh().await {
-        return internal(&e);
+        tracing::error!(error = %e, "snapshot refresh failed after delete");
     }
     tracing::info!(id, admin = is_admin, "result unpublished");
     StatusCode::NO_CONTENT.into_response()

@@ -31,6 +31,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+      - if: runner.os == 'Linux'
+        run: echo "CC_$(echo '${{ matrix.target }}' | tr '-' '_')=musl-gcc" >> "$GITHUB_ENV"
       - run: cargo build -p benchpress --profile release-cli --locked --target ${{ matrix.target }}
       - name: Package
         run: |

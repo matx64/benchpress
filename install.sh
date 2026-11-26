@@ -36,6 +36,9 @@ detect_target() {
     case "$os" in
         Linux) echo "$arch-unknown-linux-musl" ;;
         Darwin)
+            if [ "$arch" = x86_64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = 1 ]; then
+                arch=aarch64
+            fi
             [ "$arch" = aarch64 ] || fail "Intel Macs are not supported. Benchpress runs on Apple Silicon."
             echo "aarch64-apple-darwin"
             ;;
@@ -102,6 +105,8 @@ main() {
     esac
 
     if [ "$#" -gt 0 ]; then
+        rm -rf "$tmp"
+        trap - EXIT INT TERM
         if (: </dev/tty) 2>/dev/null; then
             exec "$bin" "$@" </dev/tty
         fi

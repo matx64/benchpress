@@ -33,7 +33,7 @@
   <li><strong>Collected:</strong> CPU model and core counts, RAM size, disk type and model, machine model name, OS version and kernel, power source, thermal state, the timings above, and the names (never values) of build variables found in your shell.</li>
   <li><strong>Never collected:</strong> hostname, username, home directory or any absolute path, serial numbers, hardware UUIDs, MAC or IP addresses.</li>
   <li>The server never stores IP addresses and keeps them out of its logs. Rate limiting happens in memory only.</li>
-  <li>Each upload returns a delete token saved on your machine; <code>benchpress unpublish &lt;id&gt;</code> removes the result.</li>
+  <li>Each upload returns a delete token saved on your machine; <code>benchpress unpublish &lt;id&gt;</code> deletes the result from the database. Backups keep a copy for up to 30 days.</li>
 </ul>
 
 <h2>Trust</h2>

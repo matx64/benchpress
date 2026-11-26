@@ -41,6 +41,9 @@ impl Config {
     /// Read `BENCHPRESS_*` variables.
     pub fn from_env() -> Result<Config> {
         let var = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
+        if var("BENCHPRESS_ADMIN_TOKEN").is_some_and(|t| t.len() < 32) {
+            anyhow::bail!("BENCHPRESS_ADMIN_TOKEN must be at least 32 characters");
+        }
         Ok(Config {
             db: var("BENCHPRESS_DB").unwrap_or_else(|| "benchpress.db".into()),
             bind: var("BENCHPRESS_BIND")
@@ -65,6 +68,7 @@ pub struct AppState {
     pub registry: Registry,
     pub config: Config,
     pub snapshot: RwLock<Arc<stats::Snapshot>>,
+    refresh_lock: tokio::sync::Mutex<()>,
     pub views: views::Views,
     pub og_cache: og::Cache,
 }
@@ -79,6 +83,7 @@ impl AppState {
             views: views::Views::new(&config.public_url),
             og_cache: og::Cache::new(og_dir),
             snapshot: RwLock::new(Arc::default()),
+            refresh_lock: tokio::sync::Mutex::new(()),
             config,
         });
         state.refresh().await?;
@@ -87,6 +92,7 @@ impl AppState {
 
     /// Reload the snapshot after a write.
     pub async fn refresh(&self) -> Result<()> {
+        let _guard = self.refresh_lock.lock().await;
         let rows = db::all_rows(&self.pool).await?;
         *self.snapshot.write().expect("snapshot lock") = Arc::new(stats::Snapshot { rows });
         Ok(())
@@ -98,19 +104,70 @@ impl AppState {
     }
 }
 
+/// Rate-limit key: the client IP, widened to its /64 for IPv6 since one host usually owns the whole prefix.
+#[derive(Clone, Copy)]
+struct NetworkKey;
+
+impl tower_governor::key_extractor::KeyExtractor for NetworkKey {
+    type Key = std::net::IpAddr;
+
+    fn extract<T>(
+        &self,
+        req: &axum::http::Request<T>,
+    ) -> Result<Self::Key, tower_governor::GovernorError> {
+        Ok(match SmartIpKeyExtractor.extract(req)? {
+            std::net::IpAddr::V6(ip) => std::net::IpAddr::V6(std::net::Ipv6Addr::from(
+                ip.to_bits() & !((1u128 << 64) - 1),
+            )),
+            ip @ std::net::IpAddr::V4(_) => ip,
+        })
+    }
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        let _ = tokio::signal::ctrl_c().await;
+    };
+    #[cfg(unix)]
+    let term = async {
+        if let Ok(mut s) = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        {
+            s.recv().await;
+        }
+    };
+    #[cfg(not(unix))]
+    let term = std::future::pending::<()>();
+    tokio::select! {
+        () = ctrl_c => {}
+        () = term => {}
+    }
+}
+
 /// Build the router.
 pub fn app(state: Arc<AppState>, rate_limit: bool) -> Router {
-    let mut submit = post(api::create).layer(DefaultBodyLimit::max(
-        benchpress_core::validate::MAX_PAYLOAD_BYTES + 1024,
-    ));
+    let mut submit = post(api::create)
+        .layer::<_, std::convert::Infallible>(axum::middleware::map_response(api::json_too_large))
+        .layer(DefaultBodyLimit::max(
+            benchpress_core::validate::MAX_PAYLOAD_BYTES + 1024,
+        ));
     if rate_limit {
-        let governor = GovernorConfigBuilder::default()
-            .per_second(360)
-            .burst_size(10)
-            .key_extractor(SmartIpKeyExtractor)
-            .finish()
-            .expect("valid governor config");
-        submit = submit.layer(GovernorLayer::new(Arc::new(governor)));
+        let governor = Arc::new(
+            GovernorConfigBuilder::default()
+                .per_second(360)
+                .burst_size(10)
+                .key_extractor(NetworkKey)
+                .finish()
+                .expect("valid governor config"),
+        );
+        let limiter = governor.limiter().clone();
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(600));
+            loop {
+                tick.tick().await;
+                limiter.retain_recent();
+            }
+        });
+        submit = submit.layer(GovernorLayer::new(governor));
     }
     Router::new()
         .route("/api/v1/results", submit)
@@ -186,9 +243,7 @@ pub async fn main_entry() -> Result<()> {
                 listener,
                 app(state, true).into_make_service_with_connect_info::<SocketAddr>(),
             )
-            .with_graceful_shutdown(async {
-                let _ = tokio::signal::ctrl_c().await;
-            })
+            .with_graceful_shutdown(shutdown_signal())
             .await?;
             Ok(())
         }

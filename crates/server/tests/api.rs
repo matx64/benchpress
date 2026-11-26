@@ -5,9 +5,11 @@ use axum::http::{Method, Request, StatusCode};
 use benchpress_server::{AppState, Config, app, db, seed};
 use http_body_util::BodyExt;
 use serde_json::Value;
+use sha2::Digest;
 use tower::ServiceExt;
 
 const CLIENT_IP: &str = "203.0.113.77";
+const ADMIN_TOKEN: &str = "admin-token-for-tests-0123456789abcdef";
 
 #[derive(Clone, Default)]
 struct Logs(Arc<Mutex<Vec<u8>>>);
@@ -51,7 +53,7 @@ async fn submit_show_unpublish() {
         db: db_path.clone(),
         bind: "127.0.0.1:0".parse().unwrap(),
         public_url: "http://test".into(),
-        admin_token_sha: None,
+        admin_token_sha: Some(hex::encode(sha2::Sha256::digest(ADMIN_TOKEN))),
         json_logs: false,
     };
     let state = AppState::new(config, db::open(&db_path).await.unwrap())
@@ -59,7 +61,9 @@ async fn submit_show_unpublish() {
         .unwrap();
     let router = app(Arc::clone(&state), false);
 
-    let (result, _) = seed::generate(1).remove(0);
+    let mut generated = seed::generate(2);
+    let other = serde_json::to_string(&generated.pop().unwrap().0).unwrap();
+    let (result, _) = generated.remove(0);
     let valid = serde_json::to_string(&result).unwrap();
     let mut bad = result.clone();
     bad.scenarios[0].runs[0].wall_ms = 1;
@@ -67,6 +71,7 @@ async fn submit_show_unpublish() {
     let mut huge = String::from("{\"pad\":\"");
     huge.push_str(&"x".repeat(benchpress_core::validate::MAX_PAYLOAD_BYTES));
     huge.push_str("\"}");
+    let over_limit = "x".repeat(benchpress_core::validate::MAX_PAYLOAD_BYTES + 4096);
 
     let send = |method: Method, path: String, token: Option<String>, body: String| {
         let router = router.clone();
@@ -98,6 +103,9 @@ async fn submit_show_unpublish() {
     let id = created["id"].as_str().unwrap().to_owned();
     let token = created["delete_token"].as_str().unwrap().to_owned();
     assert_eq!(created["url"], format!("http://test/r/{id}"));
+    let (status, created) = send(Method::POST, "/api/v1/results".into(), None, other).await;
+    assert_eq!(status, StatusCode::CREATED, "{created}");
+    let other_id = created["id"].as_str().unwrap().to_owned();
 
     let steps = [
         Step {
@@ -137,6 +145,15 @@ async fn submit_show_unpublish() {
             code: Some("payload_too_large"),
         },
         Step {
+            name: "over the body limit",
+            method: Method::POST,
+            path: "/api/v1/results",
+            token: None,
+            body: Some("over_limit"),
+            status: StatusCode::PAYLOAD_TOO_LARGE,
+            code: Some("payload_too_large"),
+        },
+        Step {
             name: "show",
             method: Method::GET,
             path: "/api/v1/results/{id}",
@@ -149,6 +166,15 @@ async fn submit_show_unpublish() {
             name: "page",
             method: Method::GET,
             path: "/r/{id}",
+            token: None,
+            body: None,
+            status: StatusCode::OK,
+            code: None,
+        },
+        Step {
+            name: "share card",
+            method: Method::GET,
+            path: "/r/{id}/og.png",
             token: None,
             body: None,
             status: StatusCode::OK,
@@ -200,13 +226,40 @@ async fn submit_show_unpublish() {
             code: None,
         },
         Step {
+            name: "share card after delete",
+            method: Method::GET,
+            path: "/r/{id}/og.png",
+            token: None,
+            body: None,
+            status: StatusCode::NOT_FOUND,
+            code: None,
+        },
+        Step {
+            name: "admin deletes any result",
+            method: Method::DELETE,
+            path: "/api/v1/results/{other}",
+            token: Some("admin"),
+            body: None,
+            status: StatusCode::NO_CONTENT,
+            code: None,
+        },
+        Step {
+            name: "show after admin delete",
+            method: Method::GET,
+            path: "/api/v1/results/{other}",
+            token: None,
+            body: None,
+            status: StatusCode::NOT_FOUND,
+            code: Some("not_found"),
+        },
+        Step {
             name: "resubmit after delete",
             method: Method::POST,
             path: "/api/v1/results",
             token: None,
             body: Some("valid"),
-            status: StatusCode::CONFLICT,
-            code: Some("duplicate"),
+            status: StatusCode::CREATED,
+            code: None,
         },
     ];
 
@@ -215,17 +268,22 @@ async fn submit_show_unpublish() {
             Some("valid") => valid.clone(),
             Some("bad") => bad.clone(),
             Some("huge") => huge.clone(),
+            Some("over_limit") => over_limit.clone(),
             Some(raw) => raw.to_owned(),
             None => String::new(),
         };
-        let token = s.token.map(|t| {
-            if t == "own" {
-                token.clone()
-            } else {
-                t.to_owned()
-            }
+        let token = s.token.map(|t| match t {
+            "own" => token.clone(),
+            "admin" => ADMIN_TOKEN.to_owned(),
+            t => t.to_owned(),
         });
-        let (status, json) = send(s.method, s.path.replace("{id}", &id), token, body).await;
+        let (status, json) = send(
+            s.method,
+            s.path.replace("{id}", &id).replace("{other}", &other_id),
+            token,
+            body,
+        )
+        .await;
         assert_eq!(status, s.status, "{}: {json}", s.name);
         if let Some(code) = s.code {
             assert_eq!(json["code"], code, "{}: {json}", s.name);

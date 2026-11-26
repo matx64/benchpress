@@ -1,9 +1,8 @@
 //! Open Graph share cards: the brand kit's result template filled in and rendered with resvg.
 
-use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::PathBuf;
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, LazyLock};
 
 use anyhow::{Context, Result};
 use axum::body::Bytes;
@@ -32,19 +31,15 @@ static FONTS: LazyLock<(Arc<resvg::usvg::fontdb::Database>, String)> = LazyLock:
     (Arc::new(db), body)
 });
 
-/// Memory cache backed by a directory on disk.
+/// PNG cards cached on disk, one file per result id.
 pub struct Cache {
     dir: PathBuf,
-    mem: Mutex<HashMap<String, Bytes>>,
 }
 
 impl Cache {
     /// Cache rooted at `dir` (created lazily).
     pub fn new(dir: PathBuf) -> Cache {
-        Cache {
-            dir,
-            mem: Mutex::new(HashMap::new()),
-        }
+        Cache { dir }
     }
 
     fn path(&self, id: &str) -> Option<PathBuf> {
@@ -55,33 +50,21 @@ impl Cache {
 
     /// Cached PNG for `id`.
     pub fn get(&self, id: &str) -> Option<Bytes> {
-        if let Some(b) = self.mem.lock().ok()?.get(id) {
-            return Some(b.clone());
-        }
-        let bytes = Bytes::from(std::fs::read(self.path(id)?).ok()?);
-        self.mem.lock().ok()?.insert(id.to_owned(), bytes.clone());
-        Some(bytes)
+        Some(Bytes::from(std::fs::read(self.path(id)?).ok()?))
     }
 
     /// Store a PNG for `id`.
     pub fn put(&self, id: &str, png: Vec<u8>) -> Bytes {
-        let bytes = Bytes::from(png);
         if let Some(p) = self.path(id)
             && std::fs::create_dir_all(&self.dir).is_ok()
         {
-            let _ = std::fs::write(p, &bytes);
+            let _ = std::fs::write(p, &png);
         }
-        if let Ok(mut m) = self.mem.lock() {
-            m.insert(id.to_owned(), bytes.clone());
-        }
-        bytes
+        Bytes::from(png)
     }
 
     /// Drop a card, e.g. after the result is unpublished.
     pub fn forget(&self, id: &str) {
-        if let Ok(mut m) = self.mem.lock() {
-            m.remove(id);
-        }
         if let Some(p) = self.path(id) {
             let _ = std::fs::remove_file(p);
         }

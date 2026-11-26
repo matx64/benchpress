@@ -107,7 +107,7 @@ pub fn validate_result(result: &BenchResult, registry: &Registry) -> Result<Flag
     }
     let min = semver::Version::parse(MIN_CLIENT_VERSION).expect("valid constant");
     match semver::Version::parse(&result.client.version) {
-        Ok(v) if v >= min => {}
+        Ok(v) if v >= min && v.pre.is_empty() => {}
         _ => {
             return Err(Rejection::new(
                 "unsupported_client",
@@ -411,6 +411,11 @@ pub(crate) mod tests {
             (
                 "client not semver",
                 |r| r.client.version = "dev".into(),
+                Err("unsupported_client"),
+            ),
+            (
+                "client pre-release",
+                |r| r.client.version = "9.0.0-seed".into(),
                 Err("unsupported_client"),
             ),
             (
