@@ -4,6 +4,7 @@
 pub mod format;
 pub mod hardware;
 pub mod hash;
+pub mod hints;
 pub mod registry;
 pub mod result;
 pub mod suite;

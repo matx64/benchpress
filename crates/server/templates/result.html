@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "macros.html" import tier %}
+{% block main %}
+<article>
+<section class="result-hero" aria-labelledby="result-time">
+  <p class="eyebrow">{{ tier(suite.tier) }} <span>{{ suite.project }} · {{ headline }} build</span></p>
+  <h1 id="result-time" class="display result-time num">{{ time }}</h1>
+  <p class="result-machine">{{ machine }}</p>
+  <p class="muted">{{ os }} · published {{ date }} · median of {{ suite.runs }} runs</p>
+</section>
+
+<section class="strip-wrap" aria-label="This result among all results">
+  {{ strip|safe }}
+  <p><span class="you-key"><svg aria-hidden="true"><use href="#you"/></svg>This result.</span> {{ comparison }}</p>
+</section>
+
+{% if flags %}
+<section class="section" aria-labelledby="flags-title">
+  <h2 id="flags-title">Flagged</h2>
+  <p class="muted mt-3">Flagged results are kept but left out of comparisons unless you include them.</p>
+  <ul class="hints flags mt-5">{% for f in flags %}<li>{{ f.text }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<section class="section" aria-labelledby="scen-title">
+  <div class="section-head"><h2 id="scen-title">Scenarios</h2><a href="/compare?a={{ id }}">Compare with…</a></div>
+  <table class="data stack-sm">
+    <thead><tr><th scope="col">Scenario</th><th scope="col" class="r">Median</th><th scope="col" class="r">Range</th><th scope="col" class="r">Variation</th><th scope="col" class="r">CPU used</th><th scope="col" class="r">Peak memory</th><th scope="col" class="r">Swap</th></tr></thead>
+    <tbody>
+    {% for s in scenarios %}
+      <tr>
+        <td class="strong full">{{ s.label }}</td>
+        <td class="r num strong" data-label="Median">{{ s.median }}</td>
+        <td class="r num" title="Runs: {{ s.runs }}">{{ s.min }} to {{ s.max }}</td>
+        <td class="r num" data-label="Variation">{{ s.cv }}</td>
+        <td class="r num" data-label="CPU">{{ s.cpu or "–" }}</td>
+        <td class="r num" data-label="Memory">+{{ s.mem }}</td>
+        <td class="r num" data-label="Swap">{{ s.swap or "none" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted mt-3"><small>CPU used is total CPU time divided by wall time times logical cores. Peak memory is system memory in use above the level before each run.</small></p>
+</section>
+
+{% if hints %}
+<section class="section" aria-labelledby="hints-title">
+  <h2 id="hints-title">What the numbers say</h2>
+  <ul class="hints mt-5">{% for h in hints %}<li>{{ h }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<section class="section" aria-labelledby="env-title">
+  <h2 id="env-title">Machine and environment</h2>
+  <dl class="facts mt-5">{% for d in details %}<div><dt>{{ d.k }}</dt><dd>{{ d.v }}</dd></div>{% endfor %}</dl>
+</section>
+
+<section class="section cols-2" aria-label="Compare and data">
+  <div>
+    <h2 id="compare-title">Compare with…</h2>
+    <form class="compare-form mt-5" method="get" action="/compare">
+      <input type="hidden" name="a" value="{{ id }}">
+      <label class="field">Another result link or id<input type="search" name="b" placeholder="https://…/r/AbC123xyz9" required></label>
+      <button class="btn" type="submit">Compare</button>
+    </form>
+    {% if nearby %}
+    <p class="muted mt-5"><small>Close to this result</small></p>
+    <ul class="nearby">{% for n in nearby %}<li><a href="/compare?a={{ id }}&amp;b={{ n.id }}">{{ n.label }}</a> <span class="muted num">{{ n.time }}</span></li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  <div>
+    <h2>Data</h2>
+    <p class="mt-5"><a href="/api/v1/results/{{ id }}">Raw JSON</a> · <a href="/suites#{{ suite.key }}">Suite {{ suite.key }}</a></p>
+    <p class="muted mt-3"><small>Suite hash <span class="hash">{{ suite.hash }}</span></small></p>
+  </div>
+</section>
+</article>
+{% endblock %}

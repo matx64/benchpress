@@ -1,0 +1,116 @@
+/* Benchpress design tokens v1. Dark (slate) is the default theme. */
+
+/* Theme: set data-theme="light" or "dark" on <html>; with none, the OS preference applies. */
+
+
+
+:root {
+  color-scheme: dark light;
+  --bp-font: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --bp-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --bp-stretch-display: 68%;
+  --bp-stretch-body: 100%;
+  --bp-weight-body: 400;
+  --bp-weight-strong: 600;
+  --bp-weight-display: 800;
+  --bp-size-xs: 0.875rem;
+  --bp-size-sm: 1rem;
+  --bp-size-base: 1.125rem;
+  --bp-size-md: 1.25rem;
+  --bp-size-lg: 1.5625rem;
+  --bp-size-xl: 1.9375rem;
+  --bp-size-2xl: 2.4375rem;
+  --bp-size-3xl: 3.8125rem;
+  --bp-size-4xl: 6rem;
+  --bp-leading-body: 1.5;
+  --bp-leading-display: 0.95;
+  --bp-tracking-display: -0.02em;
+  --bp-space-0: 0rem;
+  --bp-space-1: 0.25rem;
+  --bp-space-2: 0.5rem;
+  --bp-space-3: 0.75rem;
+  --bp-space-4: 1rem;
+  --bp-space-5: 1.5rem;
+  --bp-space-6: 2rem;
+  --bp-space-7: 3rem;
+  --bp-space-8: 4rem;
+  --bp-space-9: 6rem;
+  --bp-space-10: 8rem;
+  --bp-radius-sm: 2px;
+  --bp-radius: 4px;
+  --bp-radius-icon: 22%;
+  --bp-content-max: 1200px;
+  --bp-measure: 70ch;
+  --bp-ease: cubic-bezier(0.2, 0, 0, 1);
+  --bp-duration: 180ms;
+}
+
+:root,
+:root[data-theme="dark"] {
+  --bp-bg: #1B2026;
+  --bp-surface: #232931;
+  --bp-surface-raised: #2B323B;
+  --bp-line: #323943;
+  --bp-text: #F1F2EE;
+  --bp-text-muted: #9AA3AC;
+  --bp-tier-quick: #6E757D;
+  --bp-tier-standard: #B4BAC0;
+  --bp-tier-heavy: #F1F2EE;
+  --bp-you: #F5E663;
+  --bp-you-outline: #F5E663;
+  --bp-on-you: #1B2026;
+  --bp-positive: #8ED1A5;
+  --bp-negative: #F2877E;
+  --bp-caution: #F5B971;
+  --bp-focus: #F5E663;
+  --bp-chart-bar: #6E757D;
+  --bp-chart-grid: #2B323B;
+}
+
+:root[data-theme="light"] {
+  --bp-bg: #F4F5F3;
+  --bp-surface: #FFFFFF;
+  --bp-surface-raised: #ECEEEB;
+  --bp-line: #DADDE0;
+  --bp-text: #1B2026;
+  --bp-text-muted: #5A636C;
+  --bp-tier-quick: #7F868D;
+  --bp-tier-standard: #4F575F;
+  --bp-tier-heavy: #1B2026;
+  --bp-you: #F5E663;
+  --bp-you-outline: #1B2026;
+  --bp-on-you: #1B2026;
+  --bp-positive: #1D7745;
+  --bp-negative: #C2362B;
+  --bp-caution: #94600A;
+  --bp-focus: #1B2026;
+  --bp-chart-bar: #7F868D;
+  --bp-chart-grid: #E6E8E5;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bp-bg: #F4F5F3;
+    --bp-surface: #FFFFFF;
+    --bp-surface-raised: #ECEEEB;
+    --bp-line: #DADDE0;
+    --bp-text: #1B2026;
+    --bp-text-muted: #5A636C;
+    --bp-tier-quick: #7F868D;
+    --bp-tier-standard: #4F575F;
+    --bp-tier-heavy: #1B2026;
+    --bp-you: #F5E663;
+    --bp-you-outline: #1B2026;
+    --bp-on-you: #1B2026;
+    --bp-positive: #1D7745;
+    --bp-negative: #C2362B;
+    --bp-caution: #94600A;
+    --bp-focus: #1B2026;
+    --bp-chart-bar: #7F868D;
+    --bp-chart-grid: #E6E8E5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --bp-duration: 0ms; }
+}

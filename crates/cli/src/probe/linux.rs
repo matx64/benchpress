@@ -158,7 +158,7 @@ pub(crate) fn parse_cpuinfo(text: &str) -> CpuInfo {
         match k {
             "processor" => info.logical += 1,
             "model name" | "Model Name" if info.brand.is_none() && !v.is_empty() => {
-                info.brand = Some(v.to_owned())
+                info.brand = Some(v.to_owned());
             }
             "vendor_id" if info.vendor.is_none() => {
                 info.vendor = Some(match v {

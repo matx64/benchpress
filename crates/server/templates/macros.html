@@ -1,0 +1,2 @@
+{% macro tier(t) %}<span class="tier tier-{{ t.id }}"><svg aria-hidden="true"><use href="#tier-{{ t.id }}"/></svg>{{ t.label }}</span>{% endmacro %}
+{% macro install_box(id) %}<div class="cmd"><code id="{{ id }}">{{ install_cmd }}</code><button class="btn" type="button" data-copy="#{{ id }}"><span>Copy</span></button></div>{% endmacro %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "macros.html" import tier %}
+{% block main %}
+<p class="eyebrow">{{ tier(suite.tier) }} <span>suite · {{ suite.project }}@{{ suite.version }}</span></p>
+<h1 class="display title">Machines</h1>
+<p class="lede">Median {{ scenario_label|lower }} time per configuration: CPU, RAM and OS. The bar spans the middle half of results (p25 to p75); the tick is the median.</p>
+
+<form class="filters" method="get" action="/machines" data-auto>
+  <label class="field">Suite
+    <select name="suite">{% for s in suites %}<option value="{{ s.key }}"{% if s.key == suite.key %} selected{% endif %}>{{ s.label }}</option>{% endfor %}</select>
+  </label>
+  <label class="field">Scenario
+    <select name="scenario">{% for s in scenarios %}<option value="{{ s.id }}"{% if s.id == scenario %} selected{% endif %}>{{ s.label }}</option>{% endfor %}</select>
+  </label>
+  <label class="field">OS
+    <select name="os"><option value="">Any</option>{% for o in oses %}<option{% if o == q.os %} selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+  </label>
+  <label class="field">CPU vendor
+    <select name="vendor"><option value="">Any</option>{% for v in vendors %}<option{% if v == q.vendor %} selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+  </label>
+  <label class="field">RAM
+    <select name="ram"><option value="">Any</option>{% for r in rams %}<option value="{{ r }}"{% if r == q.ram %} selected{% endif %}>{{ r }} GB</option>{% endfor %}</select>
+  </label>
+  <label class="field">Form factor
+    <select name="form"><option value="">Any</option>{% for f in forms %}<option value="{{ f }}"{% if f == q.form %} selected{% endif %}>{{ f|capitalize }}</option>{% endfor %}</select>
+  </label>
+  {% if q.cpu %}<input type="hidden" name="cpu" value="{{ q.cpu }}">{% endif %}
+  <label class="check"><input type="checkbox" name="flagged" value="1"{% if q.flagged %} checked{% endif %}> Include flagged</label>
+  <button class="btn" type="submit">Apply</button>
+</form>
+
+{% if q.cpu %}<p class="muted">Showing {{ q.cpu }} only. <a href="/machines?suite={{ suite.key|urlencode }}&amp;scenario={{ scenario|urlencode }}">Show all CPUs</a></p>{% endif %}
+
+{% if rows %}
+<p class="muted"><small>{{ count }} configuration{{ "" if count == 1 else "s" }} from {{ results }} result{{ "" if results == 1 else "s" }}{% if not q.flagged %}, flagged results excluded{% endif %}.</small></p>
+<table class="data stack-sm mt-3">
+  <caption class="sr-only">Configurations for {{ suite.project }}, {{ scenario_label|lower }}</caption>
+  <thead><tr>
+    <th scope="col" aria-sort="{{ sort.cpu.aria }}"><a href="{{ sort.cpu.href }}">CPU</a></th>
+    <th scope="col" aria-sort="{{ sort.ram.aria }}"><a href="{{ sort.ram.href }}">RAM</a></th>
+    <th scope="col">OS</th>
+    <th scope="col" class="r" aria-sort="{{ sort.n.aria }}"><a href="{{ sort.n.href }}">Results</a></th>
+    <th scope="col" class="r" aria-sort="{{ sort.median.aria }}"><a href="{{ sort.median.href }}">Median</a></th>
+    <th scope="col" class="range-cell">Spread</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="strong full">{% if r.single %}<a href="/r/{{ r.single }}">{{ r.cpu }}</a>{% else %}<a href="{{ r.href }}">{{ r.cpu }}</a>{% endif %}{% if r.families %}<br><small class="muted">{{ r.families }}</small>{% endif %}</td>
+      <td class="num">{{ r.mem_gb }} GB</td>
+      <td>{{ r.os }}</td>
+      <td class="r num" data-label="Results">{{ r.n }}</td>
+      <td class="r num strong">{{ r.median }}</td>
+      <td class="range-cell full" title="{{ r.p25 }} to {{ r.p75 }}">{{ r.range_bar|safe }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if page.total > 1 %}
+<nav class="pager" aria-label="Pages">
+  {% if page.prev %}<a href="{{ page.prev }}">Previous</a>{% endif %}
+  <span class="muted">Page {{ page.current }} of {{ page.total }}</span>
+  {% if page.next %}<a href="{{ page.next }}">Next</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="empty"><strong>No results for this filter yet.</strong>Run benchpress on a machine like this and be the first. <a href="/install">Install benchpress</a></div>
+{% endif %}
+{% endblock %}

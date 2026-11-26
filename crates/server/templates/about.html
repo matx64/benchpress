@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="prose">
+<h1 class="display title">Methodology and privacy</h1>
+<p class="lede">Benchpress answers buying questions with real builds: clean builds, incremental rebuilds and <code>cargo check</code> on pinned Rust projects, measured on the machines people actually use.</p>
+
+<h2>What a run does</h2>
+<ul>
+  <li>Installs the suite's exact Rust toolchain into Benchpress's own cache with <code>rustup-init</code>, verified by checksum. Your <code>~/.rustup</code> and <code>~/.cargo</code> are never touched.</li>
+  <li>Downloads the project at a pinned commit, verifies the archive's SHA-256 and extracts it outside your home directory, on disk (<code>/var/tmp</code> on Linux, <code>$TMPDIR</code> on macOS; never a RAM-backed <code>/tmp</code>).</li>
+  <li>Fetches dependencies once, untimed. Every measured command then runs with <code>--offline</code>, so the network never affects a result.</li>
+  <li>Runs every command from an empty environment plus a short allowlist. <code>RUSTC_WRAPPER</code> (sccache), <code>RUSTFLAGS</code>, custom linkers and other shell settings are ignored, and the run refuses to start if any cargo config file sits above the build directory.</li>
+  <li>Clean scenarios delete the target directory before each run. Incremental scenarios append a comment to one source file before each run and restore it afterwards.</li>
+  <li>Rests between runs (10 seconds by default) and records thermal state where the OS reports it.</li>
+</ul>
+
+<h2>What is measured</h2>
+<ul>
+  <li><strong>Wall time</strong> from spawning cargo to its exit. Each scenario runs three times; results show the median.</li>
+  <li><strong>CPU time</strong> of cargo and every rustc it starts, from the kernel's child resource usage.</li>
+  <li><strong>Memory</strong>: system memory and swap sampled every 250 ms, reported as the peak above the level before the run. On Linux, memory pressure (PSI) too.</li>
+  <li><strong>Variation</strong>: the coefficient of variation across runs. Above 10% the result is flagged.</li>
+</ul>
+<p>macOS scans new executables such as build scripts and proc-macros, which slows Rust builds. Adding your terminal under System Settings → Privacy &amp; Security → Developer Tools avoids it. Benchpress cannot read that setting without privileges, so it records it as unknown.</p>
+
+<h2>Flags</h2>
+<p>Flagged results are accepted and shown, but left out of rankings and aggregates unless you include them.</p>
+<ul>{% for f in flags %}<li>{{ f.text }}</li>{% endfor %}</ul>
+
+<h2 id="privacy">Privacy</h2>
+<p>Nothing leaves your machine unless you publish. Before upload, Benchpress shows the exact JSON and asks you to confirm. Published results are public.</p>
+<ul>
+  <li><strong>Collected:</strong> CPU model and core counts, RAM size, disk type and model, machine model name, OS version and kernel, power source, thermal state, the timings above, and the names (never values) of build variables found in your shell.</li>
+  <li><strong>Never collected:</strong> hostname, username, home directory or any absolute path, serial numbers, hardware UUIDs, MAC or IP addresses.</li>
+  <li>The server never stores IP addresses and keeps them out of its logs. Rate limiting happens in memory only.</li>
+  <li>Each upload returns a delete token saved on your machine; <code>benchpress unpublish &lt;id&gt;</code> removes the result.</li>
+</ul>
+
+<h2>Trust</h2>
+<p>Results are not signed. Trust comes from validation and aggregation: the server checks suite hashes, run counts and plausibility (CPU time within what the cores can provide, memory within RAM plus swap, build times above a per-suite floor), rejects exact duplicates, and shows medians over many machines.</p>
+
+<h2>Add a suite</h2>
+<p>Suites are TOML manifests in the repository. See <a href="https://github.com/matx64/benchpress/blob/main/docs/adding-a-suite.md">adding a suite</a>.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "macros.html" import tier %}
+{% block main %}
+{% if rows %}
+<p class="eyebrow">{{ tier(suite.tier) }} <span>{{ suite.project }}@{{ suite.version }} · median per scenario</span></p>
+<h1 class="display title"><a href="{{ a.href }}">{{ a.name }}</a> <span class="muted">vs</span> <a href="{{ b.href }}">{{ b.name }}</a></h1>
+{% if summary %}<p class="compare-summary">{{ summary }}</p>{% endif %}
+{{ chart|safe }}
+<table class="data stack-sm mt-7">
+  <caption class="sr-only">Differences per scenario</caption>
+  <thead><tr><th scope="col">Scenario</th><th scope="col" class="r">{{ a.name }}</th><th scope="col" class="r">{{ b.name }}</th><th scope="col" class="r">B vs A</th><th scope="col" class="r">Time</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr><td class="strong full">{{ r.label }}</td><td class="r num" data-label="A">{{ r.a }}</td><td class="r num" data-label="B">{{ r.b }}</td><td class="r num {{ 'faster' if r.b_faster else 'slower' }}" data-label="B vs A">{{ r.pct }}</td><td class="r num" data-label="Time">{{ r.secs }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="muted mt-3"><small>Negative percentages mean B is faster than A.</small></p>
+{% else %}
+<h1 class="display title">Compare</h1>
+<p class="lede">Two results, or two configurations from the machines page, side by side. Only results from the same suite version are comparable.</p>
+{% if error %}<p class="notice mt-5" role="alert">{{ error }}</p>{% endif %}
+{% endif %}
+<form class="compare-form mt-7" method="get" action="/compare">
+  <label class="field">A<input type="search" name="a" value="{{ a_input }}" placeholder="Result link or id" required></label>
+  <label class="field">B<input type="search" name="b" value="{{ b_input }}" placeholder="Result link or id" required></label>
+  <button class="btn" type="submit">Compare</button>
+</form>
+{% endblock %}

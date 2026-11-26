@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block main %}
+{% include "insights_nav.html" %}
+<h1 class="display title">Do more cores help?</h1>
+<p class="lede">Median clean release time for {{ suite.project }} against logical core count, one mark per configuration. Rust builds parallelize well until a few large crates and the final link dominate.</p>
+<section class="mt-7">
+{% if chart %}{{ chart|safe }}{% else %}
+<div class="empty"><strong>No results for this suite yet.</strong>Run benchpress and publish to add the first point.</div>
+{% endif %}
+</section>
+{% endblock %}

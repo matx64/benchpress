@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "macros.html" import tier %}
+{% block main %}
+<h1 class="display title">Suites</h1>
+<p class="lede">Every suite pins a project commit, its source archive checksum and an exact Rust toolchain. A suite never changes after release: any edit is a new version, and results are only compared within one version.</p>
+{% for s in suites %}
+<section class="suite-block" id="{{ s.key }}" aria-labelledby="t-{{ s.key }}">
+  <p class="eyebrow">{{ tier(s.tier) }} <span>{{ s.key }}</span></p>
+  <h2 id="t-{{ s.key }}">{{ s.project }}</h2>
+  <p class="muted mt-3">{{ s.description }}.</p>
+  <dl class="facts mt-5">
+    <div><dt>Source</dt><dd><a href="{{ s.repo }}/tree/{{ s.commit }}">{{ s.repo|replace("https://github.com/", "") }} @ {{ s.commit_short }}</a></dd></div>
+    <div><dt>Toolchain</dt><dd>Rust {{ s.toolchain }}</dd></div>
+    <div><dt>Runs</dt><dd>{{ s.runs }} per scenario</dd></div>
+    <div><dt>Time and disk</dt><dd>{{ s.minutes }}, {{ s.disk_gb }} GB</dd></div>
+    <div><dt>Results</dt><dd><a href="/machines?suite={{ s.key|urlencode }}">{{ s.n }}</a></dd></div>
+    <div><dt>Cargo options</dt><dd><code>{{ s.build_args or "none" }}</code></dd></div>
+  </dl>
+  <table class="data stack-sm mt-5">
+    <thead><tr><th scope="col">Scenario</th><th scope="col">Kind</th><th scope="col">Command</th></tr></thead>
+    <tbody>{% for sc in s.scenarios %}
+      <tr><td class="strong full">{{ sc.label }}</td><td>{{ sc.kind|capitalize }}</td><td class="full"><code>cargo {{ sc.args }}</code>{% if sc.touch %}<br><small class="muted">changes {{ sc.touch }} before each run</small>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  <p class="mt-3"><small class="muted">Manifest hash</small><br><span class="hash">{{ s.hash }}</span></p>
+  <p class="mt-3"><small class="muted">Archive <a href="{{ s.archive_url }}">{{ s.commit_short }}.tar.gz</a> SHA-256</small><br><span class="hash">{{ s.archive_sha256 }}</span></p>
+</section>
+{% endfor %}
+{% endblock %}

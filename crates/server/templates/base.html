@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"{% if theme %} data-theme="{{ theme }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="{% if theme %}{{ theme }}{% else %}dark light{% endif %}">
+<meta name="theme-color" content="#1B2026" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F4F5F3" media="(prefers-color-scheme: light)">
+<title>{% if title == "Benchpress" %}Benchpress · Rust compile-time benchmarks{% else %}{{ title }} · Benchpress{% endif %}</title>
+<meta name="description" content="{{ description }}">
+{% if path %}<link rel="canonical" href="{{ public_url }}{{ path }}">{% endif %}
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="{{ asset('icons/favicon.svg') }}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="{{ font|safe }}" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:'Archivo';src:url('{{ font|safe }}') format('woff2');font-style:normal;font-weight:100 900;font-stretch:62% 125%;font-display:swap}</style>
+<link rel="stylesheet" href="{{ css|safe }}">
+<meta property="og:site_name" content="Benchpress">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta property="og:image" content="{{ og_image or (public_url ~ '/social/og-default.png') }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{% if path %}<meta property="og:url" content="{{ public_url }}{{ path }}">{% endif %}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ description }}">
+<meta name="twitter:image" content="{{ og_image or (public_url ~ '/social/og-default.png') }}">
+</head>
+<body>
+{{ sprite }}
+<a class="skip" href="#main">Skip to content</a>
+{% if seed %}<div class="seed-banner" role="note">Seed data: these results are fake and exist only for local design work.</div>{% endif %}
+<header class="site-header wrap">
+  <a class="brand" href="/" aria-label="Benchpress home">{{ lockup }}</a>
+  <nav aria-label="Main">
+    <a href="/machines"{% if nav == "machines" %} aria-current="page"{% endif %}>Machines</a>
+    <a href="/insights/memory"{% if nav == "insights" %} aria-current="page"{% endif %}>Insights</a>
+    <a href="/suites"{% if nav == "suites" %} aria-current="page"{% endif %}>Suites</a>
+    <a href="/about"{% if nav == "about" %} aria-current="page"{% endif %}>About</a>
+    <a href="/install"{% if nav == "install" %} aria-current="page"{% endif %}>Install</a>
+  </nav>
+</header>
+<main id="main" class="wrap">
+{% block main %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Know what your machine can lift. Rust compile-time benchmarks from real machines.</p>
+    <nav aria-label="Footer">
+      <a href="https://github.com/matx64/benchpress">Source on GitHub</a>
+      <a href="/about#privacy">Privacy</a>
+      <a href="/api/v1/suites">API</a>
+      {% if theme == "light" %}<a class="theme-link" href="/theme?set=dark&amp;back={{ path|urlencode }}">Dark theme</a><a class="theme-link" href="/theme?set=system&amp;back={{ path|urlencode }}">System theme</a>
+      {% elif theme == "dark" %}<a class="theme-link" href="/theme?set=light&amp;back={{ path|urlencode }}">Light theme</a><a class="theme-link" href="/theme?set=system&amp;back={{ path|urlencode }}">System theme</a>
+      {% else %}<a class="theme-link" href="/theme?set=light&amp;back={{ path|urlencode }}">Light theme</a><a class="theme-link" href="/theme?set=dark&amp;back={{ path|urlencode }}">Dark theme</a>{% endif %}
+    </nav>
+  </div>
+</footer>
+<script>
+document.addEventListener("click",function(e){var b=e.target.closest("[data-copy]");if(!b)return;var t=document.querySelector(b.getAttribute("data-copy"));if(!t||!navigator.clipboard)return;navigator.clipboard.writeText(t.textContent.trim()).then(function(){b.setAttribute("data-copied","");b.firstChild.textContent="Copied";setTimeout(function(){b.removeAttribute("data-copied");b.firstChild.textContent="Copy"},2000)})});
+document.querySelectorAll("form[data-auto]").forEach(function(f){f.addEventListener("change",function(){f.requestSubmit?f.requestSubmit():f.submit()})});
+</script>
+</body>
+</html>
