@@ -2,24 +2,45 @@
 {% from "macros.html" import tier, install_box %}
 {% block main %}
 <section class="home-hero" aria-labelledby="hero-title">
-  <p class="eyebrow">{{ tier(suite.tier) }} <span>suite · {{ suite.project }} · clean release build, median per configuration</span></p>
-  <h1 id="hero-title" class="display">Fastest machines building {{ suite.project }}</h1>
-  <div class="grid-hero mt-7">
-    <div>
-      {% if chart %}{{ chart|safe }}
-      <p class="mt-5"><a href="/machines?suite={{ suite.key|urlencode }}">All {{ suite.n }} results for this suite</a></p>
-      {% else %}
-      <div class="empty"><strong>No results for this suite yet.</strong>Run benchpress on your machine and be the first on the board.</div>
-      {% endif %}
-    </div>
-    <aside class="install-aside" aria-label="Run benchpress">
-      <p class="mantra">Know what your machine can lift.</p>
-      <p class="muted">Benchpress builds real Rust projects with pinned toolchains, times them, and shows how your machine compares. Results stay on your machine unless you choose to publish them.</p>
-      <p><strong>Run it now, without installing:</strong></p>
-      {{ install_box("install-cmd") }}
-      <p class="muted"><small>Linux (x86_64, arm64) and Apple Silicon Macs. Nothing stays behind unless you keep it. <a href="/start">What the script does</a></small></p>
-    </aside>
+  <p class="eyebrow">Rust compile-time benchmarks</p>
+  <h1 id="hero-title" class="display">How fast does your machine build Rust?</h1>
+  <p class="lede">Benchpress compiles real open source Rust projects with pinned toolchains, times every build, and shows where your machine ranks against others. One command, nothing to install, and results stay on your machine unless you publish them.</p>
+  <div class="hero-cmd">{{ install_box("install-cmd") }}</div>
+  <p class="muted hero-note"><small>Linux (x86_64, arm64) and Apple Silicon Macs. No sudo, nothing left behind. <a href="/start">What the script does</a></small></p>
+</section>
+
+<section class="section steps" aria-label="How it works">
+  <div class="step">
+    <span class="step-n num">1</span>
+    <h2>Run the command</h2>
+    <p class="muted">The script checks your CPU, downloads the matching binary, verifies its checksum, and opens a menu in your terminal.</p>
   </div>
+  <div class="step">
+    <span class="step-n num">2</span>
+    <h2>Pick a suite</h2>
+    <p class="muted">Benchpress fetches a pinned Rust toolchain and project sources, then times clean and incremental builds several times each.</p>
+  </div>
+  <div class="step">
+    <span class="step-n num">3</span>
+    <h2>See where you stand</h2>
+    <p class="muted">Compare your times with machines like yours. Publish the result to get a shareable page, or keep it local.</p>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="board-title">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">{{ tier(suite.tier) }} <span>suite · clean release build, median per configuration</span></p>
+      <h2 id="board-title">Fastest machines building {{ suite.project }}</h2>
+    </div>
+    {% if chart %}<a href="/machines?suite={{ suite.key|urlencode }}">All {{ suite.n }} results</a>{% endif %}
+  </div>
+  {% if chart %}{{ chart|safe }}
+  {% else %}
+  <div class="board-empty">
+    <p><strong>The board is empty.</strong> Run the {{ suite.tier.label|lower }} suite and publish the result to take first place.</p>
+  </div>
+  {% endif %}
 </section>
 
 <section class="section" aria-labelledby="tiers-title">
@@ -30,17 +51,16 @@
       <svg class="plate tier-{{ s.tier.id }}" viewBox="0 0 24 24" aria-hidden="true" style="color: var(--bp-tier-{{ s.tier.id }})"><use href="#tier-{{ s.tier.id }}"/></svg>
       <h3>{{ s.display_name }} <span class="muted"><small>{{ s.project }}</small></span></h3>
       <p class="muted">{{ s.description }}.</p>
-      <p><small class="muted">{{ s.minutes }} · {{ s.disk_gb }} GB disk · {{ s.n }} result{{ "" if s.n == 1 else "s" }}</small></p>
-      <p><code>benchpress run {{ s.tier.id }}</code></p>
+      <p><small class="muted">{{ s.minutes }} · {{ s.disk_gb }} GB disk{% if s.n %} · {{ s.n }} result{{ "" if s.n == 1 else "s" }}{% endif %}</small></p>
     </article>
     {% endfor %}
   </div>
 </section>
 
-<section class="section cols-2" aria-label="Latest results and insights">
+<section class="section{% if latest %} cols-2{% endif %}" aria-label="Latest results and insights">
+  {% if latest %}
   <div>
     <div class="section-head"><h2>Latest results</h2><a href="/machines">Browse machines</a></div>
-    {% if latest %}
     <ol class="latest">
       {% for r in latest %}
       <li>
@@ -50,13 +70,11 @@
       </li>
       {% endfor %}
     </ol>
-    {% else %}
-    <div class="empty"><strong>Nothing here yet.</strong>The first published result will show up here.</div>
-    {% endif %}
   </div>
+  {% endif %}
   <div>
     <div class="section-head"><h2>Buying questions</h2></div>
-    <ol class="latest">
+    <ol class="latest{% if not latest %} cols-3{% endif %}">
       <li><a href="/insights/memory">Does more RAM help?</a><span></span><span class="meta">The same CPU with different RAM sizes, and how often builds hit swap.</span></li>
       <li><a href="/insights/cores">Do more cores help?</a><span></span><span class="meta">Build time against core count, by vendor.</span></li>
       <li><a href="/compare">Compare two machines</a><span></span><span class="meta">Paste two result links and see the difference per scenario.</span></li>
