@@ -101,7 +101,7 @@ fn result_actions(id: &str, path: &Path) -> Result<()> {
     output::blank();
     match output::choose("Do what with it?", &actions, 0)? {
         Some(0) if published => submit::unpublish(path),
-        Some(0) => submit::submit(path, false).map(|_| ()),
+        Some(0) => submit::submit(path, true).map(|_| ()),
         Some(1) => {
             if published {
                 output::line(

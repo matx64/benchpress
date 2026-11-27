@@ -26,6 +26,34 @@ pub async fn open(path: &str) -> Result<SqlitePool> {
     Ok(pool)
 }
 
+/// Recompute stored flags from each result's raw JSON, so a changed rule applies to old results.
+pub async fn reflag(pool: &SqlitePool, registry: &benchpress_core::Registry) -> Result<u64> {
+    let rows = sqlx::query("SELECT id, flags, raw_json FROM results")
+        .fetch_all(pool)
+        .await?;
+    let mut changed = 0;
+    for row in rows {
+        let Ok(r) = serde_json::from_str::<BenchResult>(row.get("raw_json")) else {
+            continue;
+        };
+        let Ok(flags) = benchpress_core::validate::validate_result(&r, registry) else {
+            continue;
+        };
+        let names: Vec<&str> = flags.iter().map(|f| f.as_str()).collect();
+        let names = serde_json::to_string(&names)?;
+        if names != row.get::<&str, _>("flags") {
+            sqlx::query("UPDATE results SET flags = ?, excluded = ? WHERE id = ?")
+                .bind(&names)
+                .bind(i64::from(!flags.is_empty()))
+                .bind(row.get::<&str, _>("id"))
+                .execute(pool)
+                .await?;
+            changed += 1;
+        }
+    }
+    Ok(changed)
+}
+
 /// Outcome of an insert.
 pub enum Inserted {
     /// Stored.

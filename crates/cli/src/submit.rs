@@ -97,7 +97,7 @@ pub fn load_submission(result_path: &Path) -> Option<Submission> {
     serde_json::from_str(&std::fs::read_to_string(submission_path(result_path)).ok()?).ok()
 }
 
-/// Validate, show the payload, confirm, upload. Returns the share URL.
+/// Validate, confirm unless `yes`, upload. Returns the share URL.
 pub fn submit(result_path: &Path, yes: bool) -> Result<Option<String>> {
     let text = std::fs::read_to_string(result_path)
         .with_context(|| format!("reading {}", result_path.display()))?;
@@ -116,15 +116,8 @@ pub fn submit(result_path: &Path, yes: bool) -> Result<Option<String>> {
     if !yes {
         output::blank();
         output::line(format!(
-            "This exact JSON will be sent to {server}. It contains hardware model details and timings, and no names, paths, serial numbers or addresses."
+            "The result goes to {server} with hardware model details and timings, and no names, paths, serial numbers or addresses."
         ));
-        output::line(format!(
-            "Published results are public. You can unpublish it later {}.",
-            output::later("unpublish <id>", "Your results")
-        ));
-        output::blank();
-        output::page(&serde_json::to_string_pretty(&result)?);
-        output::blank();
         if !output::confirm("Publish this result?", false) {
             output::line("Not published. The result stays on this machine.");
             return Ok(None);
@@ -146,6 +139,13 @@ pub fn submit(result_path: &Path, yes: bool) -> Result<Option<String>> {
                 serde_json::to_string_pretty(&sub)?,
             )?;
             output::line(format!("Published: {}", paint(Role::You, &sub.url)));
+            output::line(paint(
+                Role::Muted,
+                &format!(
+                    "Published results are public. You can unpublish it later {}.",
+                    output::later("unpublish <id>", "Your results")
+                ),
+            ));
             Ok(Some(sub.url))
         }
         409 => bail!("the server already has this exact result."),

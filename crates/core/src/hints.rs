@@ -88,7 +88,7 @@ pub fn hints(result: &BenchResult, flags: &[Flag]) -> Vec<String> {
             Flag::Battery => "Running on battery: results flagged and excluded from comparisons.".into(),
             Flag::LowPower => "Low power mode was on: results flagged and excluded from comparisons.".into(),
             Flag::Virtualized => "Running in a virtual machine or container: results flagged and excluded from comparisons.".into(),
-            Flag::HighVariance => "Run times varied by more than 10%: close other apps and keep the machine idle for steadier numbers.".into(),
+            Flag::HighVariance => "Run times varied by more than 10% and 100 ms: close other apps and keep the machine idle for steadier numbers.".into(),
             Flag::Outlier => "Far from other results of this configuration: held back from comparisons until more results agree.".into(),
         });
     }

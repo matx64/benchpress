@@ -167,7 +167,7 @@ pub fn execute(args: &Args) -> Result<()> {
                 .trim_start_matches("https://")
                 .to_owned();
             if output::confirm(&format!("Publish anonymously to {host}?"), false) {
-                submit::submit(&outcome.path, false)?;
+                submit::submit(&outcome.path, true)?;
             } else {
                 output::line(paint(
                     Role::Muted,

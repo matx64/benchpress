@@ -37,11 +37,11 @@ enum Command {
         #[command(subcommand)]
         action: Option<ResultsAction>,
     },
-    /// Validate a local result, show the payload, confirm and upload it
+    /// Validate a local result, confirm and upload it
     Submit {
         /// Local result id (or prefix) or a path to a result file
         id: String,
-        /// Upload without showing the payload and asking
+        /// Upload without asking
         #[arg(long)]
         yes: bool,
     },

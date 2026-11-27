@@ -49,7 +49,7 @@ The menu covers everything. To run one command without it, pass the command afte
 run <suite>        run quick, standard or heavy
 list               list suites
 results            list local results; `results show <id>` for one
-submit <id>        review the payload, then publish it
+submit <id>        publish a saved result
 unpublish <id>     delete a published result
 doctor             check the toolchain, disk space and power state
 clean [--all]      delete cached toolchains, sources and builds (--all: results too)

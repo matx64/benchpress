@@ -85,6 +85,10 @@ impl AppState {
             refresh_lock: tokio::sync::Mutex::new(()),
             config,
         });
+        let reflagged = db::reflag(&state.pool, &state.registry).await?;
+        if reflagged > 0 {
+            tracing::info!(count = reflagged, "recomputed result flags");
+        }
         state.refresh().await?;
         Ok(state)
     }

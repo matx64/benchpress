@@ -43,8 +43,10 @@ The server accepts results taken in poor conditions but marks them. Charts and r
 | Battery | the machine ran on battery power |
 | Low power | low power mode or a power-saving profile was active |
 | Virtualized | the CLI detected a virtual machine or container |
-| High variance | a scenario's coefficient of variation is above 10% |
+| High variance | a scenario's coefficient of variation is above 10% and its slowest run is more than 100 ms slower than its fastest |
 | Outlier | a scenario's median is more than 1.5 times faster or slower than the median of at least four other unflagged results with the same suite version, CPU family, RAM size and OS, and at least two thirds of those results lie within 1.5 times of the peers' median. The server recomputes this flag whenever results change and never stores it, so the result rejoins comparisons once enough results agree with it |
+
+The server stores the other flags and recomputes them from the raw results each time it starts, so a changed rule also applies to results already published.
 
 ## Validation
 

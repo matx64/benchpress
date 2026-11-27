@@ -14,6 +14,9 @@ pub const MIN_CLIENT_VERSION: &str = "0.1.0";
 /// Coefficient of variation above which a result is flagged.
 pub const HIGH_CV: f64 = 0.1;
 
+/// Spread between the slowest and fastest run that a scenario must also exceed to be flagged.
+pub const HIGH_VARIANCE_MIN_SPREAD_MS: u64 = 100;
+
 /// Results needed from the same configuration before outliers are held back.
 pub const OUTLIER_MIN_PEERS: usize = 4;
 
@@ -56,7 +59,7 @@ pub enum Flag {
     LowPower,
     /// Ran inside a VM or container.
     Virtualized,
-    /// Runs varied by more than [`HIGH_CV`].
+    /// Runs varied by more than [`HIGH_CV`] and [`HIGH_VARIANCE_MIN_SPREAD_MS`].
     HighVariance,
     /// Far from other results of the same configuration. Computed by the server, never stored.
     Outlier,
@@ -83,7 +86,7 @@ impl Flag {
                 "Ran inside a virtual machine or container, so hardware may be shared."
             }
             Flag::HighVariance => {
-                "Run times varied by more than 10%, so something else was likely competing for the machine."
+                "Run times varied by more than 10% and 100 ms, so something else was likely competing for the machine."
             }
             Flag::Outlier => {
                 "Much faster or slower than other results from the same configuration, so it is held back until more results agree with it."
@@ -313,7 +316,9 @@ pub fn validate_result(result: &BenchResult, registry: &Registry) -> Result<Flag
                 format!("summary of `{}` does not match its runs", scen.id),
             ));
         }
-        max_cv = max_cv.max(recomputed.cv);
+        if recomputed.max_wall_ms - recomputed.min_wall_ms > HIGH_VARIANCE_MIN_SPREAD_MS {
+            max_cv = max_cv.max(recomputed.cv);
+        }
     }
 
     let env = &result.environment;
@@ -586,6 +591,19 @@ pub(crate) mod tests {
                     resummarize(r);
                 },
                 Ok(&[Flag::HighVariance]),
+            ),
+            (
+                "variance within timer noise",
+                |r| {
+                    r.scenarios[1].runs = vec![r.scenarios[1].runs[0].clone(); 3];
+                    for (run, ms) in r.scenarios[1].runs.iter_mut().zip([300, 302, 250]) {
+                        run.wall_ms = ms;
+                        run.user_ms = ms;
+                        run.sys_ms = ms / 10;
+                    }
+                    resummarize(r);
+                },
+                Ok(&[]),
             ),
         ];
         for (name, mutate, expected) in cases {

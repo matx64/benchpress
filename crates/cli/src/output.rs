@@ -223,24 +223,3 @@ pub fn confirm(prompt: &str, default: bool) -> bool {
             false
         })
 }
-
-/// Show long text through `$PAGER` (or `less`), falling back to printing.
-pub fn page(text: &str) {
-    if is_interactive() && text.lines().count() > 40 {
-        let pager = std::env::var("PAGER").unwrap_or_else(|_| "less -R".into());
-        let mut parts = pager.split_whitespace();
-        if let Some(bin) = parts.next()
-            && let Ok(mut child) = std::process::Command::new(bin)
-                .args(parts)
-                .stdin(std::process::Stdio::piped())
-                .spawn()
-        {
-            if let Some(mut stdin) = child.stdin.take() {
-                let _ = stdin.write_all(text.as_bytes());
-            }
-            let _ = child.wait();
-            return;
-        }
-    }
-    line(text);
-}

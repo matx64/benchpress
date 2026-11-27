@@ -19,7 +19,7 @@
   <li><strong>Wall time</strong> from spawning cargo to its exit. Each scenario runs three times; results show the median.</li>
   <li><strong>CPU time</strong> of cargo and every rustc it starts, from the kernel's child resource usage.</li>
   <li><strong>Memory</strong>: system memory and swap sampled every 250 ms, reported as the peak above the level before the run. On Linux, memory pressure (PSI) too.</li>
-  <li><strong>Variation</strong>: the coefficient of variation across runs. Above 10% the result is flagged.</li>
+  <li><strong>Variation</strong>: the coefficient of variation across runs. Above 10%, with more than 100 ms between the slowest and fastest run, the result is flagged.</li>
 </ul>
 <p>macOS scans new executables such as build scripts and proc-macros, which slows Rust builds. Adding your terminal under System Settings → Privacy &amp; Security → Developer Tools avoids it. Benchpress cannot read that setting without privileges, so it records it as unknown.</p>
 
