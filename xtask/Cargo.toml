@@ -9,4 +9,4 @@ workspace = true
 
 [dependencies]
 anyhow = "1.0.105"
-benchpress-core = { version = "0.1.0", path = "../crates/core" }
+benchpress-core = { version = "0.1.1", path = "../crates/core" }
