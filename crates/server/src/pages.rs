@@ -880,7 +880,7 @@ async fn compare(
         "Compare",
         "Compare two Benchpress results or machine configurations side by side.",
         "/compare",
-        "",
+        "compare",
     );
     ctx.insert(
         "a_input".into(),

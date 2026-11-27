@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 <head>
+<script>document.documentElement.classList.add("js")</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="{% if theme %}{{ theme }}{% else %}dark light{% endif %}">
@@ -33,35 +34,70 @@
 {{ sprite }}
 <a class="skip" href="#main">Skip to content</a>
 {% if seed %}<div class="seed-banner" role="note">Seed data: these results are fake and exist only for local design work.</div>{% endif %}
-<header class="site-header wrap">
-  <a class="brand" href="/" aria-label="Benchpress home">{{ lockup }}</a>
-  <nav aria-label="Main">
-    <a href="/machines"{% if nav == "machines" %} aria-current="page"{% endif %}>Machines</a>
-    <a href="/insights/memory"{% if nav == "insights" %} aria-current="page"{% endif %}>Insights</a>
-    <a href="/suites"{% if nav == "suites" %} aria-current="page"{% endif %}>Suites</a>
-    <a href="/about"{% if nav == "about" %} aria-current="page"{% endif %}>About</a>
-    <a href="/start"{% if nav == "start" %} aria-current="page"{% endif %}>Run it now</a>
-  </nav>
+<header class="site-header">
+  <div class="wrap header-bar">
+    <a class="brand" href="/" aria-label="Benchpress home">{{ lockup }}</a>
+    <nav id="site-nav" class="site-nav" aria-label="Main">
+      <a href="/machines"{% if nav == "machines" %} aria-current="page"{% endif %}>Machines</a>
+      <a href="/insights/memory"{% if nav == "insights" %} aria-current="page"{% endif %}>Insights</a>
+      <a href="/compare"{% if nav == "compare" %} aria-current="page"{% endif %}>Compare</a>
+      <a href="/suites"{% if nav == "suites" %} aria-current="page"{% endif %}>Suites</a>
+      <a href="/about"{% if nav == "about" %} aria-current="page"{% endif %}>About</a>
+      <a class="nav-gh" href="https://github.com/matx64/benchpress"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="nav-gh-label">GitHub</span></a>
+    </nav>
+    <a class="btn btn-primary header-run" href="/start"{% if nav == "start" %} aria-current="page"{% endif %}>Run it</a>
+    <button class="icon-btn menu-btn" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+  </div>
 </header>
 <main id="main" class="wrap">
 {% block main %}{% endblock %}
 </main>
 <footer class="site-footer">
-  <div class="wrap">
-    <p>Know what your machine can lift. Compile-time benchmarks from real machines.</p>
-    <nav aria-label="Footer">
-      <a href="https://github.com/matx64/benchpress">Source on GitHub</a>
-      <a href="/about#privacy">Privacy</a>
-      <a href="/api/v1/suites">API</a>
-      {% if theme == "light" %}<a class="theme-link" href="/theme?set=dark&amp;back={{ path|urlencode }}">Dark theme</a><a class="theme-link" href="/theme?set=system&amp;back={{ path|urlencode }}">System theme</a>
-      {% elif theme == "dark" %}<a class="theme-link" href="/theme?set=light&amp;back={{ path|urlencode }}">Light theme</a><a class="theme-link" href="/theme?set=system&amp;back={{ path|urlencode }}">System theme</a>
-      {% else %}<a class="theme-link" href="/theme?set=light&amp;back={{ path|urlencode }}">Light theme</a><a class="theme-link" href="/theme?set=dark&amp;back={{ path|urlencode }}">Dark theme</a>{% endif %}
+  <div class="wrap footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href="/" aria-label="Benchpress home">{{ lockup }}</a>
+      <p>Know what your machine can lift. Compile-time benchmarks from real machines.</p>
+      <a class="footer-gh" href="https://github.com/matx64/benchpress"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>matx64/benchpress</a>
+    </div>
+    <nav class="footer-col" aria-label="Explore">
+      <h2>Explore</h2>
+      <a href="/machines">Machines</a>
+      <a href="/insights/memory">Does more RAM help?</a>
+      <a href="/insights/cores">Do more cores help?</a>
+      <a href="/compare">Compare two results</a>
     </nav>
+    <nav class="footer-col" aria-label="Project">
+      <h2>Project</h2>
+      <a href="/start">Run a benchmark</a>
+      <a href="/suites">Suites</a>
+      <a href="/about">Methodology</a>
+      <a href="/about#privacy">Privacy</a>
+    </nav>
+  </div>
+  <div class="wrap footer-base">
+    <p>Open source under the MIT license.</p>
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <a href="/theme?set=system&amp;back={{ path|urlencode }}" data-theme-set="system"{% if not theme %} aria-current="true"{% endif %} title="System theme"><svg class="icon" aria-hidden="true"><use href="#i-system"/></svg><span class="sr-only">System</span></a>
+      <a href="/theme?set=light&amp;back={{ path|urlencode }}" data-theme-set="light"{% if theme == "light" %} aria-current="true"{% endif %} title="Light theme"><svg class="icon" aria-hidden="true"><use href="#i-sun"/></svg><span class="sr-only">Light</span></a>
+      <a href="/theme?set=dark&amp;back={{ path|urlencode }}" data-theme-set="dark"{% if theme == "dark" %} aria-current="true"{% endif %} title="Dark theme"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg><span class="sr-only">Dark</span></a>
+    </div>
   </div>
 </footer>
 <script>
-document.addEventListener("click",function(e){var b=e.target.closest("[data-copy]");if(!b)return;var t=document.querySelector(b.getAttribute("data-copy"));if(!t||!navigator.clipboard)return;navigator.clipboard.writeText(t.textContent.trim()).then(function(){b.setAttribute("data-copied","");b.firstChild.textContent="Copied";setTimeout(function(){b.removeAttribute("data-copied");b.firstChild.textContent="Copy"},2000)})});
-document.querySelectorAll("form[data-auto]").forEach(function(f){f.addEventListener("change",function(){f.requestSubmit?f.requestSubmit():f.submit()})});
+(function(){
+var d=document,h=d.documentElement;
+d.addEventListener("click",function(e){
+  var b=e.target.closest("[data-copy]");
+  if(b){var t=d.querySelector(b.getAttribute("data-copy"));if(!t||!navigator.clipboard)return;navigator.clipboard.writeText(t.textContent.trim()).then(function(){var l=b.querySelector(".copy-label"),u=b.querySelector("use"),st=b.parentNode.querySelector("[role=status]");if(st)st.textContent="Copied to clipboard";b.setAttribute("data-copied","");if(l)l.textContent="Copied";if(u)u.setAttribute("href","#i-check");clearTimeout(b._t);b._t=setTimeout(function(){b.removeAttribute("data-copied");if(l)l.textContent="Copy";if(u)u.setAttribute("href","#i-copy");if(st)st.textContent=""},2000)}).catch(function(){});return}
+  var m=e.target.closest(".menu-btn");
+  if(m){var o=m.getAttribute("aria-expanded")!=="true";m.setAttribute("aria-expanded",o);m.querySelector("use").setAttribute("href",o?"#i-close":"#i-menu");m.closest(".site-header").classList.toggle("nav-open",o);return}
+  var s=e.target.closest("[data-theme-set]");
+  if(s&&window.fetch&&!(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button)){e.preventDefault();var v=s.getAttribute("data-theme-set");fetch(s.href,{credentials:"same-origin",redirect:"manual"});if(v==="system")h.removeAttribute("data-theme");else h.setAttribute("data-theme",v);d.querySelector('meta[name="color-scheme"]').content=v==="system"?"dark light":v;d.querySelectorAll("[data-theme-set]").forEach(function(x){if(x===s)x.setAttribute("aria-current","true");else x.removeAttribute("aria-current")})}
+});
+d.addEventListener("keydown",function(e){if(e.key!=="Escape")return;var m=d.querySelector('.menu-btn[aria-expanded="true"]');if(m){m.click();m.focus()}});
+var sm=matchMedia("(max-width: 640px)"),fp=d.querySelectorAll("details[data-collapse-sm]");if(sm.matches)fp.forEach(function(x){x.open=false});sm.addEventListener&&sm.addEventListener("change",function(q){if(!q.matches)fp.forEach(function(x){x.open=true})});
+d.querySelectorAll("form[data-auto]").forEach(function(f){f.addEventListener("change",function(){f.requestSubmit?f.requestSubmit():f.submit()})});
+})();
 </script>
 </body>
 </html>

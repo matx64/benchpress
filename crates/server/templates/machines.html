@@ -5,6 +5,8 @@
 <h1 class="display title">Machines</h1>
 <p class="lede">Median {{ scenario_label|lower }} time per configuration: CPU, RAM and OS. The bar spans the middle half of results (p25 to p75); the tick is the median.</p>
 
+<details class="filter-panel" open data-collapse-sm>
+<summary>Filters</summary>
 <form class="filters" method="get" action="/machines" data-auto>
   <label class="field">Suite
     <select name="suite">{% for s in suites %}<option value="{{ s.key }}"{% if s.key == suite.key %} selected{% endif %}>{{ s.label }}</option>{% endfor %}</select>
@@ -28,12 +30,13 @@
   <label class="check"><input type="checkbox" name="flagged" value="1"{% if q.flagged %} checked{% endif %}> Include flagged</label>
   <button class="btn" type="submit">Apply</button>
 </form>
+</details>
 
 {% if q.cpu %}<p class="muted">Showing {{ q.cpu }} only. <a href="/machines?suite={{ suite.key|urlencode }}&amp;scenario={{ scenario|urlencode }}">Show all CPUs</a></p>{% endif %}
 
 {% if rows %}
 <p class="muted"><small>{{ count }} configuration{{ "" if count == 1 else "s" }} from {{ results }} result{{ "" if results == 1 else "s" }}{% if not q.flagged %}, flagged results excluded{% endif %}.</small></p>
-<table class="data stack-sm mt-3">
+<table class="data stack-sm sm-4 mt-3">
   <caption class="sr-only">Configurations for {{ suite.project }}, {{ scenario_label|lower }}</caption>
   <thead><tr>
     <th scope="col" aria-sort="{{ sort.cpu.aria }}"><a href="{{ sort.cpu.href }}">CPU</a></th>
@@ -47,10 +50,10 @@
   {% for r in rows %}
     <tr>
       <td class="strong full">{% if r.single %}<a href="/r/{{ r.single }}">{{ r.cpu }}</a>{% else %}<a href="{{ r.href }}">{{ r.cpu }}</a>{% endif %}{% if r.families %}<br><small class="muted">{{ r.families }}</small>{% endif %}</td>
-      <td class="num">{{ r.mem_gb }} GB</td>
-      <td>{{ r.os }}</td>
+      <td class="num" data-label="RAM">{{ r.mem_gb }} GB</td>
+      <td data-label="OS">{{ r.os }}</td>
       <td class="r num" data-label="Results">{{ r.n }}</td>
-      <td class="r num strong">{{ r.median }}</td>
+      <td class="r num strong" data-label="Median">{{ r.median }}</td>
       <td class="range-cell full" title="{{ r.p25 }} to {{ r.p75 }}">{{ r.range_bar|safe }}</td>
     </tr>
   {% endfor %}

@@ -5,7 +5,8 @@
 <h1 class="display title">Run it now, nothing to install</h1>
 <p class="lede">One command for Linux (x86_64, arm64) and Apple Silicon Macs. No sudo, no compiler needed, and nothing stays behind unless you keep it.</p>
 <div class="mt-7">{{ install_box("install-cmd") }}</div>
-<p class="muted"><small>Skip the menu and start the quick suite: <code class="wrap">curl -fsSL {{ run_url }} | sh -s -- run quick</code></small></p>
+<p class="muted mt-5">To skip the menu and start the quick suite right away:</p>
+<div class="mt-3">{{ install_box("quick-cmd", "-s -- run quick") }}</div>
 
 <h2>What the script does</h2>
 <ul>

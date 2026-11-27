@@ -12,10 +12,10 @@
   <h2 id="swap-title">How often builds hit swap</h2>
   <p class="muted mt-3">Share of results where clean release used more than 256 MB of swap above the starting level.</p>
   {% if swap %}
-  <table class="data stack-sm mt-5">
+  <table class="data stack-sm sm-3 mt-5">
     <thead><tr><th scope="col">RAM</th><th scope="col" class="r">Results</th><th scope="col" class="r">Used swap</th><th scope="col" class="range-cell"><span class="sr-only">Share</span></th></tr></thead>
     <tbody>{% for s in swap %}
-      <tr><td class="strong num">{{ s.gb }} GB</td><td class="r num" data-label="Results">{{ s.n }}</td><td class="r num" data-label="Used swap">{{ s.share }}</td>
+      <tr><td class="strong num" data-label="RAM">{{ s.gb }} GB</td><td class="r num" data-label="Results">{{ s.n }}</td><td class="r num" data-label="Used swap">{{ s.share }}</td>
       <td class="range-cell full"><svg class="swap-bar" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="10" fill="var(--bp-surface-raised)"/><rect width="{{ s.w }}" height="10" fill="var(--bp-chart-bar)"/></svg></td></tr>
     {% endfor %}</tbody>
   </table>
