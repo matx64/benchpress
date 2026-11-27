@@ -47,9 +47,9 @@ Every release that is not a pre-release ends up as latest, even if you unticked 
 
 Deploy runs `fly deploy --remote-only`, which builds `Dockerfile` on Fly's builders and rolls the machine. You can also start it by hand from the Actions tab, or run `fly deploy` locally. It needs the repository secret `FLY_API_TOKEN`, created with `fly tokens create deploy --app benchpress-matx`.
 
-### After the first release
+### The run command
 
-The run command fetches `https://benchpress.matx.dev/run`, which redirects to `RUN_URL` in `crates/server/src/assets.rs`. Until a release exists, that is `run.sh` on `main`, and the script downloads `releases/latest`. Once the first release is out, set `RUN_URL` to `https://github.com/matx64/benchpress/releases/latest/download/run.sh` and deploy, so the script and the binary always come from the same release. The command itself stays the same.
+The run command fetches `https://benchpress.matx.dev/run`, which redirects to `RUN_URL` in `crates/server/src/assets.rs`: the `run.sh` attached to the latest release. That copy is pinned to its own tag, so the script and the binary always come from the same release. The command itself never changes.
 
 ## Backups
 

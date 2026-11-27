@@ -103,9 +103,8 @@ fn serve(name: &str, immutable: bool) -> Response {
         .into_response()
 }
 
-/// Where `/run` redirects. Switch to
-/// `https://github.com/matx64/benchpress/releases/latest/download/run.sh` after the first release.
-pub const RUN_URL: &str = "https://raw.githubusercontent.com/matx64/benchpress/main/run.sh";
+/// Where `/run` redirects: the launcher attached to the latest release.
+pub const RUN_URL: &str = "https://github.com/matx64/benchpress/releases/latest/download/run.sh";
 
 /// The launcher's source, for reading before running it.
 pub const SCRIPT_SOURCE_URL: &str = "https://github.com/matx64/benchpress/blob/main/run.sh";
